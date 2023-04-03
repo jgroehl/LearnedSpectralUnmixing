@@ -1,8 +1,9 @@
 from models import OximetryLSTM
+from utils.io import load_data_as_tensorflow_datasets
 import tensorflow as tf
 
 TRAIN_SAMPLES = 64
-model = OximetryLSTM()
+model = OximetryLSTM("DUMMY")
 
 train_spectra = tf.random.normal((TRAIN_SAMPLES, 41, 1))
 train_oxy = tf.random.normal((TRAIN_SAMPLES, 1))
@@ -22,5 +23,4 @@ val_ds = val_ds.batch(batch_size, drop_remainder=True)
 val_ds = val_ds.cache()
 
 model.compile()
-
 model.fit(train_ds, val_ds)

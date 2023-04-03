@@ -1,5 +1,48 @@
 import numpy as np
+import tensorflow as tf
 from utils.linear_unmixing import linear_unmixing
+
+
+def load_data_as_tensorflow_datasets(file_paths, num_wavelengths, batch_size=1024):
+
+    spectra, oxy = preprocess_training_data(file_paths, num_wavelengths)
+    spectra = np.swapaxes(spectra, 0, 1)
+    spectra = spectra.reshape((len(spectra), len(spectra[0]), 1))
+    oxy = oxy.reshape((len(oxy), 1))
+    threshold = int(0.95 * len(oxy))  # use 5% of training data for validation (15k randomly chosen spectra/oxy pairs)
+
+    training_spectra = tf.convert_to_tensor(spectra[:threshold, :, :])
+    val_spectra = tf.convert_to_tensor(spectra[threshold:, :, :])
+    training_oxy = tf.convert_to_tensor(oxy[:threshold, :])
+    val_oxy = tf.convert_to_tensor(oxy[threshold:, :])
+
+    ds_train = tf.data.Dataset.from_tensor_slices((training_spectra, training_oxy))
+    ds_validation = tf.data.Dataset.from_tensor_slices((val_spectra, val_oxy))
+
+    ds_train = ds_train.cache()
+    ds_train = ds_train.shuffle(buffer_size=len(training_oxy))
+    ds_train = ds_train.batch(batch_size, drop_remainder=True)
+
+    ds_validation = ds_validation.batch(batch_size, drop_remainder=True)
+    ds_validation = ds_validation.cache()
+
+    return ds_train, ds_validation
+
+
+def preprocess_training_data(file_path, num_wavelengths) -> tuple:
+    data = np.load(file_path)
+    spectra = data["spectra"]
+    oxygenations = data["oxygenation"]
+
+    spectra_mask = np.zeros_like(spectra)
+    spectra_mask[:num_wavelengths, :] = 1
+    rng = np.random.default_rng()
+    rng.shuffle(spectra_mask, axis=0)
+    nan_spectra = spectra.copy()
+    nan_spectra[spectra_mask == 0] = np.nan
+    spectra = (spectra - np.nanmean(nan_spectra, axis=0)[np.newaxis, :]) / np.nanstd(nan_spectra, axis=0)[np.newaxis, :]
+    spectra[spectra_mask == 0] = 0
+    return spectra, oxygenations
 
 
 def load_spectra_file(file_path: str, load_all_data: bool = False) -> tuple:
@@ -17,19 +60,15 @@ def load_spectra_file(file_path: str, load_all_data: bool = False) -> tuple:
         timesteps = None
 
     if not load_all_data:
-        pre_length = len(spectra[0, :])
         # Signal intensity @ 800nm
         selector = spectra[21, :] / np.max(spectra[21, :]) > 0.10
 
         # Enforce that at least 10% of the data is used for training
         if np.sum(selector) / len(selector) < 0.1:
             print("Less than 10% of training data would be used. Using top 10% signals at 800nm.")
-            selector = spectra[21, :] > np.percentile(spectra[21, :], 90)
 
         spectra = spectra[:, selector]
         oxygenations = oxygenations[selector]
-        post_length = len(spectra[0, :])
-        print(f"Using {(post_length/pre_length)*100:.1f}% of the data after filtering 10% of max")
 
         if str(distances) != "None":
             distances = distances[selector]
