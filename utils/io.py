@@ -5,9 +5,12 @@ from utils.linear_unmixing import linear_unmixing
 
 def load_data_as_tensorflow_datasets(file_paths, num_wavelengths, batch_size=1024):
 
-    spectra, oxy = preprocess_training_data(file_paths, num_wavelengths)
+    spectra, oxy = preprocess_data(file_paths, num_wavelengths)
+    print(np.shape(spectra))
     spectra = np.swapaxes(spectra, 0, 1)
+    print(np.shape(spectra))
     spectra = spectra.reshape((len(spectra), len(spectra[0]), 1))
+
     oxy = oxy.reshape((len(oxy), 1))
     threshold = int(0.95 * len(oxy))  # use 5% of training data for validation (15k randomly chosen spectra/oxy pairs)
 
@@ -29,10 +32,18 @@ def load_data_as_tensorflow_datasets(file_paths, num_wavelengths, batch_size=102
     return ds_train, ds_validation
 
 
-def preprocess_training_data(file_path, num_wavelengths) -> tuple:
+def preprocess_data(file_path, num_wavelengths) -> tuple:
     data = np.load(file_path)
     spectra = data["spectra"]
-    oxygenations = data["oxygenation"]
+
+    if len(np.shape(spectra)) > 2:
+        spectra = spectra.reshape((-1, np.shape(spectra)[0]))
+        spectra = np.swapaxes(spectra, 0, 1)
+
+    oxygenations = None
+
+    if "oxygenation" in data:
+        oxygenations = data["oxygenation"]
 
     spectra_mask = np.zeros_like(spectra)
     spectra_mask[:num_wavelengths, :] = 1
@@ -43,6 +54,45 @@ def preprocess_training_data(file_path, num_wavelengths) -> tuple:
     spectra = (spectra - np.nanmean(nan_spectra, axis=0)[np.newaxis, :]) / np.nanstd(nan_spectra, axis=0)[np.newaxis, :]
     spectra[spectra_mask == 0] = 0
     return spectra, oxygenations
+
+
+def load_test_data_as_tensorflow_datasets(file_paths, batch_size=1024):
+    spectra = preprocess_test_data(file_paths)
+    spectra = np.swapaxes(spectra, 0, 1)
+    spectra = spectra.reshape((len(spectra), len(spectra[0]), 1))
+
+    spectra = tf.convert_to_tensor(spectra)
+    # print(spectra.shape)
+    # ds = tf.data.Dataset.from_tensors(spectra)
+    # print(np.shape(list(ds.as_numpy_iterator())))
+    # ds = ds.cache()
+    # print(np.shape(list(ds.as_numpy_iterator())))
+    # ds = ds.batch(batch_size)
+    # print(np.shape(list(ds.as_numpy_iterator())))
+    # exit()
+    return spectra
+
+
+def preprocess_test_data(file_path) -> tuple:
+    data = np.load(file_path)
+    spectra = data["spectra"]
+    wavelengths = data["wavelengths"]
+    wavelengths = np.around(wavelengths / 5, decimals=0) * 5  # Round wavelengths to the nearest 5
+    input_wavelengths = np.arange(700, 901, 5)
+    wl_mask = np.isin(input_wavelengths, wavelengths)
+
+    if len(np.shape(spectra)) > 2:
+        spectra = np.swapaxes(spectra, 0, 1)
+        spectra = np.swapaxes(spectra, 1, 2)
+        spectra = spectra.reshape((np.shape(spectra)[0]**2, -1))
+        spectra = np.swapaxes(spectra, 0, 1)
+
+    spectra = (spectra - np.nanmean(spectra, axis=0)[np.newaxis, :]) / np.nanstd(spectra, axis=0)[np.newaxis, :]
+    print(np.shape(spectra))
+    full_spectra = np.zeros((41, len(spectra[0])))
+    print(np.shape(full_spectra))
+    full_spectra[wl_mask, :] = spectra
+    return full_spectra
 
 
 def load_spectra_file(file_path: str, load_all_data: bool = False) -> tuple:

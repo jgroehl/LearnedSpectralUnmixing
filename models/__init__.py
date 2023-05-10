@@ -1,1 +1,1 @@
-from .lstm import OximetryLSTM
+from .lstm import LSTMParams

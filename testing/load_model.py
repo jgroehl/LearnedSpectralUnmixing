@@ -1,3 +1,3 @@
-from models import OximetryLSTM
+from models import LSTMParams
 
-model = OximetryLSTM.load("DUMMY")
+model = LSTMParams.load("DUMMY")

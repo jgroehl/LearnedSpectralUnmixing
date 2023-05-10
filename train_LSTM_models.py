@@ -1,14 +1,19 @@
-from models import OximetryLSTM
+from models.lstm import LSTMParams, get_model
 from utils.io import load_data_as_tensorflow_datasets
 import glob
 
 PATH = r"H:\learned spectral unmixing\training_processed/"
+NUM_WAVELENGTHS = [5, 6]
 
-for file in glob.glob(PATH + "*"):
-    base_filename = file.split("/")[-1].split("\\")[-1]
-    print(base_filename)
+for n_wl in NUM_WAVELENGTHS:
+    for file in glob.glob(PATH + "*")[3:]:
+        model = get_model()
+        base_filename = file.split("/")[-1].split("\\")[-1]
+        print(base_filename)
 
-    model = OximetryLSTM(name=base_filename + "_LSTM")
-    train_ds, val_ds = load_data_as_tensorflow_datasets(PATH + "/" + base_filename + "/" + base_filename + "_train.npz", 10)
-    model.compile()
-    model.fit(train_ds, val_ds)
+        model_params = LSTMParams(name=base_filename, wl=n_wl)
+        train_ds, val_ds = load_data_as_tensorflow_datasets(PATH + "/" + base_filename + "/" + base_filename + "_train.npz",
+                                                            NUM_WAVELENGTHS)
+        model_params.compile(model)
+        model_params.fit(train_ds, val_ds, model)
+
