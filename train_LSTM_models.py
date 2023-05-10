@@ -13,7 +13,7 @@ for n_wl in NUM_WAVELENGTHS:
 
         model_params = LSTMParams(name=base_filename, wl=n_wl)
         train_ds, val_ds = load_data_as_tensorflow_datasets(PATH + "/" + base_filename + "/" + base_filename + "_train.npz",
-                                                            NUM_WAVELENGTHS)
+                                                            n_wl)
         model_params.compile(model)
         model_params.fit(train_ds, val_ds, model)
 

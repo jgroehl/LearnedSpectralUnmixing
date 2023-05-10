@@ -10,12 +10,12 @@ TEST_DATA_PATH = r"H:\learned spectral unmixing\test_final/"
 
 def evaluate(dataset, data_path, wl):
     for model_path in glob.glob(MODEL_PATH + f"*_{wl}.h5"):
-        model_name = model_path.split("/")[-1].split("\\")[-1].split(f"_{wl}")[0]
+        model_name = model_path.split("/")[-1].split("\\")[-1].split(f"_LSTM_{wl}")[0]
         print("\t", model_path)
         model_params = LSTMParams.load(model_path)
         model_params.compile()
         result = model_params(dataset)
-        np.savez(data_path.replace(".npz", f"{model_name}.npz"),
+        np.savez(data_path.replace(".npz", f"_{model_name}.npz"),
                  estimate=result.numpy())
 
 
