@@ -35,7 +35,6 @@ class LSTMParams:
     number_of_epochs = 100
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-
     def __init__(self, name: str = None, wl: int = 0):
         super(LSTMParams, self).__init__()
         if name is None:

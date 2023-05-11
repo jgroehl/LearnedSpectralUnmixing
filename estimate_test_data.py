@@ -30,13 +30,13 @@ for folder_path in glob.glob(TEST_DATA_PATH + "/mouse/*"):
     dataset = load_test_data_as_tensorflow_datasets(data_path)
     evaluate(dataset, data_path, len(wavelengths))
 
-results = dict()
-for folder_path in glob.glob(TEST_DATA_PATH + "/forearm/*"):
-    if not os.path.isdir(folder_path):
-        continue
-    print(folder_path)
-    folder = folder_path.split("/")[-1].split("\\")[-1]
-    data_path = folder_path + "/" + folder + ".npz"
-    wavelengths = np.load(data_path)["wavelengths"]
-    dataset = load_test_data_as_tensorflow_datasets(data_path)
-    evaluate(dataset, data_path, len(wavelengths))
+# results = dict()
+# for folder_path in glob.glob(TEST_DATA_PATH + "/forearm/*"):
+#     if not os.path.isdir(folder_path):
+#         continue
+#     print(folder_path)
+#     folder = folder_path.split("/")[-1].split("\\")[-1]
+#     data_path = folder_path + "/" + folder + ".npz"
+#     wavelengths = np.load(data_path)["wavelengths"]
+#     dataset = load_test_data_as_tensorflow_datasets(data_path)
+#     evaluate(dataset, data_path, len(wavelengths))
