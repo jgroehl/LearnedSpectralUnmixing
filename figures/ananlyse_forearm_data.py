@@ -8,19 +8,19 @@ from utils.distribution_distance import compute_jsd
 from utils.compute_ensemble_average import compute_ensemble_average
 
 
-def compile_distance_measures(mouse_data_path):
-    output_file = mouse_data_path + "/all_distances.npz"
+def compile_distance_measures(forearm_data_path):
+    output_file = forearm_data_path + "/all_distances.npz"
     if os.path.exists(output_file):
         return output_file
-    mouse_data_files = []
-    for folder_path in glob.glob(mouse_data_path + "/*"):
+    forearm_data_files = []
+    for folder_path in glob.glob(forearm_data_path + "/*"):
         if os.path.isdir(folder_path):
-            mouse_data_files.append(folder_path)
+            forearm_data_files.append(folder_path)
 
     all_wl = np.arange(700, 901, 5)
     results = {}
 
-    for folder_path in mouse_data_files:
+    for folder_path in forearm_data_files:
 
         filename = folder_path.split("/")[-1].split("\\")[-1]
         data = np.load(folder_path + "/" + filename + ".npz")
@@ -60,9 +60,8 @@ def compile_mouse_results(data_path):
     for folder_path in mouse_data_files:
         filename = folder_path.split("/")[-1].split("\\")[-1]
         data = np.load(folder_path + "/" + filename + ".npz")
-        plt.figure()
         lu = data["lu"]
-        mask = data["reference_mask"] == 6
+        mask = data["reference_mask"] == 1
         results["LU"].append(lu[mask])
 
         for model in ALL_MODELS:
@@ -78,11 +77,9 @@ def compile_mouse_results(data_path):
     return output_file
 
 
-def load_mouse(mouse_path, best, worst):
-    print(mouse_path)
-    mouse_name = mouse_path.split("/")[-1].split("\\")[-1]
-    print(mouse_name)
-    mouse_data = np.load(mouse_path + "/" + mouse_name + ".npz")
+def load_forearm(forearm_path, best, worst):
+    forearm_name = forearm_path.split("/")[-1].split("\\")[-1]
+    mouse_data = np.load(forearm_path + "/" + forearm_name + ".npz")
     wavelengths = mouse_data["wavelengths"]
     spectra = mouse_data["spectra"]
     mask = mouse_data["reference_mask"]
@@ -90,18 +87,13 @@ def load_mouse(mouse_path, best, worst):
     image = spectra[np.argwhere(wavelengths == 800)]
     image = np.squeeze(image)
 
-    best = np.load(mouse_path + "/" + mouse_name + f"_{best}.npz")["estimate"].reshape(*np.shape(image)) * 100
-    worst = np.load(mouse_path + "/" + mouse_name + f"_{worst}.npz")["estimate"].reshape(*np.shape(image)) * 100
-
-    image[mask <= 1] = np.nan
-    lu[mask <= 1] = np.nan
-    best[mask <= 1] = np.nan
-    worst[mask <= 1] = np.nan
+    best = np.load(forearm_path + "/" + forearm_name + f"_{best}.npz")["estimate"].reshape(*np.shape(image)) * 100
+    worst = np.load(forearm_path + "/" + forearm_name + f"_{worst}.npz")["estimate"].reshape(*np.shape(image)) * 100
 
     return np.squeeze(image), np.squeeze(lu), np.squeeze(best), np.squeeze(worst), np.squeeze(mask)
 
 
-def create_mouse_figure(data_path, models):
+def create_forearm_figure(data_path, models):
     dist_path = compile_distance_measures(data_path)
     res_path = compile_mouse_results(data_path)
     results = np.load(res_path, allow_pickle=True)
@@ -159,34 +151,25 @@ def create_mouse_figure(data_path, models):
     def add_image(ax, img, data, mask, title, legend=False):
         ax.set_title(title)
         plt.colorbar(img)
-        ax.contour(mask == 3, colors="orange")
-        ax.contour(mask == 4, colors="blue")
-        ax.contour(mask == 5, colors="green")
-        ax.contour(mask == 6, colors="red")
+        ax.contour(mask == 1, colors="red")
         hist, bins = np.histogram(data, bins=50, range=[0, 100])
         ax.stairs(len(data) - (hist / np.max(hist) * 50), len(data)-(bins / 100 * len(data)), orientation="horizontal",
-                  baseline=len(data), fill=True, alpha=0.5)
+                  baseline=len(data), fill=True, color="red")
         if legend:
-            ax.plot([], [], c="orange", label="spleen")
-            ax.plot([], [], c="blue", label="kidney")
-            ax.plot([], [], c="green", label="spine")
             ax.plot([], [], c="red", label="aorta")
         else:
-            ax.plot([], [], c="orange", label=f"{np.mean(data[mask==3]):.0f}$\pm${np.std(data[mask==3]):.0f}%")
-            ax.plot([], [], c="blue", label=f"{np.mean(data[mask==4]):.0f}$\pm${np.std(data[mask==4]):.0f}%")
-            ax.plot([], [], c="green", label=f"{np.mean(data[mask==5]):.0f}$\pm${np.std(data[mask==5]):.0f}%")
-            ax.plot([], [], c="red", label=f"{np.mean(data[mask==6]):.0f}$\pm${np.std(data[mask==6]):.0f}%")
-        ax.legend(loc="lower left", fontsize=8, frameon=False)
+            ax.plot([], [], c="red", label=f"{np.mean(data[mask==1]):.0f}$\pm${np.std(data[mask==1]):.0f}%")
+        ax.legend(loc="lower left", fontsize=9, frameon=True)
 
         ax.axis("off")
 
-    image, lu, best, worst, mask = load_mouse(data_path + "/Mouse_02", ALL_MODELS[best_dist], ALL_MODELS[worst_dist])
+    image, lu, best, worst, mask = load_forearm(data_path + "/Forearm_07", ALL_MODELS[best_dist], ALL_MODELS[worst_dist])
     add_image(ax3, ax3.imshow(image, cmap="magma"), image, mask, "PA Signal @800 nm [a.u.]", legend=True)
     add_image(ax4, ax4.imshow(lu, vmin=0, vmax=100), lu, mask, "Linear Unmixing [%]")
     add_image(ax5, ax5.imshow(best, vmin=0, vmax=100), best, mask, "Best JSD [%]")
     add_image(ax6, ax6.imshow(worst, vmin=0, vmax=100), worst, mask, "Worst JSD [%]")
 
-    image, lu, best, worst, mask = load_mouse(data_path + "/Mouse_05", ALL_MODELS[best_dist], ALL_MODELS[worst_dist])
+    image, lu, best, worst, mask = load_forearm(data_path + "/Forearm_13", ALL_MODELS[best_dist], ALL_MODELS[worst_dist])
     add_image(ax7, ax7.imshow(image, cmap="magma"), image, mask, None, legend=True)
     add_image(ax8, ax8.imshow(lu, vmin=0, vmax=100), lu, mask, None)
     add_image(ax9, ax9.imshow(best, vmin=0, vmax=100), best, mask, None)
@@ -196,4 +179,4 @@ def create_mouse_figure(data_path, models):
 
 
 if __name__ == "__main__":
-    create_mouse_figure(fr"{TEST_DATA_PATH}\mouse/", ["BASE"])
+    create_forearm_figure(fr"{TEST_DATA_PATH}\forearm/", ["BASE"])

@@ -62,18 +62,31 @@ def load_test_data_as_tensorflow_datasets(file_paths, batch_size=1024):
     spectra = spectra.reshape((len(spectra), len(spectra[0]), 1))
 
     spectra = tf.convert_to_tensor(spectra)
-    # print(spectra.shape)
-    # ds = tf.data.Dataset.from_tensors(spectra)
-    # print(np.shape(list(ds.as_numpy_iterator())))
-    # ds = ds.cache()
-    # print(np.shape(list(ds.as_numpy_iterator())))
-    # ds = ds.batch(batch_size)
-    # print(np.shape(list(ds.as_numpy_iterator())))
-    # exit()
     return spectra
 
 
-def preprocess_test_data(file_path) -> tuple:
+def load_test_data_as_tensorflow_datasets_with_wavelengths(file_path, wavelengths=None):
+    data = np.load(file_path)
+    spectra = data["spectra"]
+    data_wl = data["wavelengths"]
+
+    if wavelengths:
+        wl_mask = [wl in wavelengths for wl in data_wl]
+        wl_mask = not wl_mask
+        spectra[:, wl_mask] = np.nan
+
+        spectra = (spectra - np.nanmean(spectra, axis=0)[np.newaxis, :]) / np.nanstd(spectra, axis=0)[np.newaxis, :]
+        full_spectra = np.zeros((41, len(spectra[0])))
+        full_spectra[wl_mask, :] = spectra
+
+    spectra = np.swapaxes(spectra, 0, 1)
+    spectra = spectra.reshape((len(spectra), len(spectra[0]), 1))
+
+    spectra = tf.convert_to_tensor(spectra)
+    return spectra
+
+
+def preprocess_test_data(file_path):
     data = np.load(file_path)
     spectra = data["spectra"]
     wavelengths = data["wavelengths"]

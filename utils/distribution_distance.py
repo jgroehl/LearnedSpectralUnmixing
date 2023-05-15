@@ -12,6 +12,7 @@ def validate_input(a, b):
 
 
 def compute_kld(a, b):
+    validate_input(a, b)
     # Normalise the data
     a = (a - np.mean(a, axis=0)[np.newaxis, :]) / np.std(a, axis=0)[np.newaxis, :]
     b = (b - np.mean(b, axis=0)[np.newaxis, :]) / np.std(b, axis=0)[np.newaxis, :]
@@ -29,6 +30,7 @@ def compute_kld(a, b):
 
 
 def compute_jsd(a, b):
+    validate_input(a, b)
     # Normalise the data
     a = (a - np.mean(a, axis=0)[np.newaxis, :]) / np.std(a, axis=0)[np.newaxis, :]
     b = (b - np.mean(b, axis=0)[np.newaxis, :]) / np.std(b, axis=0)[np.newaxis, :]
@@ -43,3 +45,7 @@ def compute_jsd(a, b):
         jsd += jensenshannon(marginal_p, marginal_q, base=2)
     jsd = jsd / len(a)
     return jsd
+
+
+def compute_mmd(a, b):
+    validate_input(a, b)

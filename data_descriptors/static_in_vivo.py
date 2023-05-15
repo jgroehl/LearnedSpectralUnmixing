@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 
-PATH = r"H:\learned spectral unmixing\test_processed\experimental_static/"
+PATH = r"H:\learned spectral unmixing\test_final\forearm/"
 
 for folder_path in glob.glob(PATH + "*"):
     if not os.path.isdir(folder_path):
@@ -18,6 +18,7 @@ for folder_path in glob.glob(PATH + "*"):
     lu = data["lu"]
     mask = data["reference_mask"]
     wavelengths = data["wavelengths"]
+    print(wavelengths)
 
     artery_mask = mask == 1
     if "Mouse" in folder:

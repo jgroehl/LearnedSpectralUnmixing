@@ -4,7 +4,7 @@ import glob
 import os
 
 PATH = r"H:\learned spectral unmixing\training_processed/"
-NUM_WAVELENGTHS = [5, 6, 10, 20, 30, 40, 3]
+NUM_WAVELENGTHS = [5, 41]
 
 for n_wl in NUM_WAVELENGTHS:
     for file in glob.glob(PATH + "*"):
@@ -16,7 +16,8 @@ for n_wl in NUM_WAVELENGTHS:
         print("Running", base_filename)
 
         model_params = LSTMParams(name=base_filename, wl=n_wl)
-        train_ds, val_ds = load_data_as_tensorflow_datasets(PATH + "/" + base_filename + "/" + base_filename + "_train.npz",
+        train_ds, val_ds = load_data_as_tensorflow_datasets(PATH + "/" + base_filename + "/" +
+                                                            base_filename + "_train.npz",
                                                             n_wl)
         model_params.compile(model)
         model_params.fit(train_ds, val_ds, model)
