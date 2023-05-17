@@ -46,6 +46,7 @@ def preprocess_data(file_path, num_wavelengths) -> tuple:
         oxygenations = data["oxygenation"]
 
     spectra_mask = np.zeros_like(spectra)
+    # completely randomised spectral data for training
     spectra_mask[:num_wavelengths, :] = 1
     rng = np.random.default_rng()
     rng.shuffle(spectra_mask, axis=0)
@@ -72,12 +73,12 @@ def load_test_data_as_tensorflow_datasets_with_wavelengths(file_path, wavelength
 
     if wavelengths:
         wl_mask = [wl in wavelengths for wl in data_wl]
-        wl_mask = not wl_mask
-        spectra[:, wl_mask] = np.nan
-
+        inv_wl_mask = np.invert(wl_mask)
+        spectra[inv_wl_mask, :] = np.nan
         spectra = (spectra - np.nanmean(spectra, axis=0)[np.newaxis, :]) / np.nanstd(spectra, axis=0)[np.newaxis, :]
         full_spectra = np.zeros((41, len(spectra[0])))
-        full_spectra[wl_mask, :] = spectra
+        full_spectra[wl_mask, :] = spectra[wl_mask, :]
+        spectra = full_spectra
 
     spectra = np.swapaxes(spectra, 0, 1)
     spectra = spectra.reshape((len(spectra), len(spectra[0]), 1))

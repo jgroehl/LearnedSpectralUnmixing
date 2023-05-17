@@ -4,10 +4,10 @@ import glob
 import os
 
 PATH = r"H:\learned spectral unmixing\training_processed/"
-NUM_WAVELENGTHS = [5, 41]
+NUM_WAVELENGTHS = [25]
 
 for n_wl in NUM_WAVELENGTHS:
-    for file in glob.glob(PATH + "*"):
+    for file in glob.glob(PATH + "BASE*"):
         model = get_model()
         base_filename = file.split("/")[-1].split("\\")[-1]
         if os.path.exists(f"H:/learned spectral unmixing/models_LSTM/{base_filename}_LSTM_{n_wl}.h5"):
