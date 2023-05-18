@@ -54,7 +54,7 @@ def preprocess_data(file_path, num_wavelengths, strategy=None) -> tuple:
     def get_equal_spectra_mask():
         spectra_mask = np.zeros_like(spectra)
         num_spectra = spectra.shape[1]
-        step_size = int(np.round(total_wl / num_wavelengths))
+        step_size = int(np.floor(total_wl / num_wavelengths))
         for idx in range(num_wavelengths):
             num_entries = step_size
             if (idx + 1) * step_size > total_wl:

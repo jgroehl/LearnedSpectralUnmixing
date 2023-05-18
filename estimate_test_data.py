@@ -90,7 +90,7 @@ def evaluate_distance_from_target_wavelengths(_data_path):
 
 evaluate_baseline_methods(TEST_DATA_PATH + "/baseline/")
 
-# evaluate_distance_from_target_wavelengths(TEST_DATA_PATH + "/baseline/")
+evaluate_distance_from_target_wavelengths(TEST_DATA_PATH + "/baseline/")
 
 # results = dict()
 # for folder_path in glob.glob(TEST_DATA_PATH + "/forearm/*"):

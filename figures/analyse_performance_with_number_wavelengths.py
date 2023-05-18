@@ -27,14 +27,15 @@ results = np.asarray(results)[sort_idx]
 est_oxy = np.asarray(est_oxy)[sort_idx]
 median_results = np.median(results, axis=1)
 iqr_results = iqr(results, axis=1)
-random_points = np.random.choice(len(ground_truth), 100000, replace=False)
+random_points = np.random.choice(len(ground_truth), 10000, replace=False)
 
 
 def plot_scatter(ax, idx):
     ax.set_title(f"{wls[idx]} wavelengths")
     ax.set_xlabel("Ground Truth sO$_2$ [%]", fontweight="bold")
     ax.set_ylabel("Estimated sO$_2$ [%]", fontweight="bold")
-    ax.scatter(ground_truth[random_points] * 100, est_oxy[idx][random_points] * 100, alpha=0.002, c="black")
+    ax.plot([0, 100], [0, 100], color="green")
+    ax.scatter(ground_truth[random_points] * 100, est_oxy[idx][random_points] * 100, alpha=0.01, c="black")
     ax.spines.right.set_visible(False)
     ax.spines.top.set_visible(False)
     ax.set_xticks([0, 25, 50, 75, 100], [0, 25, 50, 75, 100])
@@ -45,18 +46,21 @@ fig = plt.figure(layout="constrained", figsize=(12, 6))
 subfigs = fig.subfigures(1, 2, wspace=0.07)
 ax0 = subfigs[0].subplots(1, 1)
 
-ax0.errorbar(wls, median_results, yerr=(iqr_results/2), ecolor="red")
+ax0.errorbar(wls, median_results)
 ax0.plot(wls, median_results, "o", c="black", zorder=5)
 ax0.spines.right.set_visible(False)
 ax0.spines.top.set_visible(False)
-ax0.set_xlabel("Absolute sO$_2$ estimation error [%]", fontweight="bold")
-ax0.set_ylabel("Number of wavelengths", fontweight="bold")
+med_42 = median_results[-1]
+for med in median_results[:-1]:
+    ax0.fill_between(wls, med, med_42, color="green", alpha=0.1)
+ax0.set_ylabel("Median absolute sO$_2$ estimation error [%]", fontweight="bold")
+ax0.set_xlabel("Number of wavelengths", fontweight="bold")
 
 ((ax1, ax2), (ax3, ax4)) = subfigs[1].subplots(2, 2)
 
-plot_scatter(ax1, 0)
-plot_scatter(ax2, 1)
-plot_scatter(ax3, 3)
-plot_scatter(ax4, len(wls)-2)
+plot_scatter(ax1, 2)
+plot_scatter(ax2, 3)
+plot_scatter(ax3, 5)
+plot_scatter(ax4, -1)
 
-plt.show()
+plt.savefig("performance_with_n_wavelengths.png", dpi=300)

@@ -2,7 +2,7 @@ from models.lstm import LSTMParams, get_model
 from utils.io import load_data_as_tensorflow_datasets
 import glob
 import argparse
-from paths import TRAINING_DATA_PATH
+from paths import TRAINING_DATA_PATH, MODEL_PATH
 import os
 
 
@@ -23,6 +23,11 @@ n_wl = args.wavelength
 file = glob.glob(f"{TRAINING_DATA_PATH}/{model_name}*")[0]
 model = get_model()
 base_filename = file.split("/")[-1].split("\\")[-1]
+
+if os.path.exists(f"{MODEL_PATH}/{base_filename}_LSTM_{n_wl}.h5"):
+    print("Skipping", base_filename, n_wl)
+    exit(0)
+
 print("Running", base_filename)
 model_params = LSTMParams(name=base_filename, wl=n_wl)
 train_ds, val_ds = load_data_as_tensorflow_datasets(TRAINING_DATA_PATH + "/" + base_filename + "/" +

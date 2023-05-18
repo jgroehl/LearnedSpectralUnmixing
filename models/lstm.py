@@ -28,9 +28,9 @@ def get_model():
 
 class LSTMParams:
 
-    learning_rate_scheduler = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5,
+    learning_rate_scheduler = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_median_error_fraction', factor=0.5,
                                                                    patience=5, min_lr=1e-7, verbose=1)
-    early_stopping_criterion = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=7, verbose=1)
+    early_stopping_criterion = tf.keras.callbacks.EarlyStopping(monitor='val_median_error_fraction', patience=7, verbose=1)
     additional_metrics = [tf.keras.metrics.MeanAbsolutePercentageError()]
     loss_function = tf.keras.losses.MeanAbsoluteError()
     number_of_epochs = 100
