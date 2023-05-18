@@ -4,7 +4,7 @@
 
 import tensorflow as tf
 import tensorflow_probability as tfp
-
+from paths import MODEL_PATH
 
 def median_error_fraction(y_true, y_pred):
     error = abs((y_true - y_pred) / y_true)
@@ -28,19 +28,21 @@ def get_model():
 class LSTMParams:
 
     learning_rate_scheduler = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5,
-                                                                   patience=5, min_lr=0.000001, verbose=1)
-    early_stopping_criterion = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=11, verbose=1)
+                                                                   patience=5, min_lr=1e-10, verbose=1)
+    early_stopping_criterion = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=12, verbose=1)
     additional_metrics = [tf.keras.metrics.MeanAbsolutePercentageError()]
     loss_function = tf.keras.losses.MeanAbsoluteError()
     number_of_epochs = 100
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-    def __init__(self, name: str = None, wl: int = 0):
+    def __init__(self, name: str = None, wl: int = 0, save_path = None):
         super(LSTMParams, self).__init__()
         if name is None:
             name = "OximetryLSTM"
+        if save_path is None:
+            save_path = MODEL_PATH
 
-        self.checkpoint_path = tf.keras.callbacks.ModelCheckpoint(f"H:/learned spectral unmixing/models_LSTM/{name}_LSTM_{wl}.h5",
+        self.checkpoint_path = tf.keras.callbacks.ModelCheckpoint(f"{save_path}/{name}_LSTM_{wl}.h5",
                                                                   monitor='val_median_error_fraction',
                                                                   mode='min', verbose=1,
                                                                   save_best_only=True,

@@ -2,11 +2,9 @@ from utils.io import load_test_data_as_tensorflow_datasets,\
                      load_test_data_as_tensorflow_datasets_with_wavelengths
 from models import LSTMParams
 import numpy as np
+from paths import MODEL_PATH, TEST_DATA_PATH
 import glob
 import os
-
-MODEL_PATH = r"H:\learned spectral unmixing\models_LSTM/"
-TEST_DATA_PATH = r"H:\learned spectral unmixing\test_final/"
 
 
 def evaluate(_dataset, _data_path, wl):

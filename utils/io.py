@@ -3,21 +3,22 @@ import tensorflow as tf
 from utils.linear_unmixing import linear_unmixing
 
 
-def load_data_as_tensorflow_datasets(file_paths, num_wavelengths, batch_size=1024):
+def load_data_as_tensorflow_datasets(file_paths, num_wavelengths, batch_size=1024, load_strategy=None):
 
-    spectra, oxy = preprocess_data(file_paths, num_wavelengths)
+    spectra, oxy = preprocess_data(file_paths, num_wavelengths, strategy=load_strategy)
     print(np.shape(spectra))
     spectra = np.swapaxes(spectra, 0, 1)
     print(np.shape(spectra))
     spectra = spectra.reshape((len(spectra), len(spectra[0]), 1))
 
     oxy = oxy.reshape((len(oxy), 1))
-    threshold = int(0.95 * len(oxy))  # use 5% of training data for validation (15k randomly chosen spectra/oxy pairs)
+    # use 5% of training data for validation (15k randomly chosen spectra/oxy pairs)
+    training_samples = np.random.choice(len(oxy), int(0.95 * len(oxy)), replace=False)
 
-    training_spectra = tf.convert_to_tensor(spectra[:threshold, :, :])
-    val_spectra = tf.convert_to_tensor(spectra[threshold:, :, :])
-    training_oxy = tf.convert_to_tensor(oxy[:threshold, :])
-    val_oxy = tf.convert_to_tensor(oxy[threshold:, :])
+    training_spectra = tf.convert_to_tensor(spectra[training_samples, :, :])
+    val_spectra = tf.convert_to_tensor(spectra[np.invert(training_samples), :, :])
+    training_oxy = tf.convert_to_tensor(oxy[training_samples, :])
+    val_oxy = tf.convert_to_tensor(oxy[np.invert(training_samples), :])
 
     ds_train = tf.data.Dataset.from_tensor_slices((training_spectra, training_oxy))
     ds_validation = tf.data.Dataset.from_tensor_slices((val_spectra, val_oxy))
@@ -32,9 +33,12 @@ def load_data_as_tensorflow_datasets(file_paths, num_wavelengths, batch_size=102
     return ds_train, ds_validation
 
 
-def preprocess_data(file_path, num_wavelengths) -> tuple:
+def preprocess_data(file_path, num_wavelengths, strategy=None) -> tuple:
     data = np.load(file_path)
     spectra = data["spectra"]
+
+    if strategy is None:
+        strategy = "random"
 
     if len(np.shape(spectra)) > 2:
         spectra = spectra.reshape((-1, np.shape(spectra)[0]))
@@ -45,15 +49,50 @@ def preprocess_data(file_path, num_wavelengths) -> tuple:
     if "oxygenation" in data:
         oxygenations = data["oxygenation"]
 
-    spectra_mask = np.zeros_like(spectra)
-    # completely randomised spectral data for training
-    spectra_mask[:num_wavelengths, :] = 1
-    rng = np.random.default_rng()
-    rng.shuffle(spectra_mask, axis=0)
-    nan_spectra = spectra.copy()
-    nan_spectra[spectra_mask == 0] = np.nan
-    spectra = (spectra - np.nanmean(nan_spectra, axis=0)[np.newaxis, :]) / np.nanstd(nan_spectra, axis=0)[np.newaxis, :]
-    spectra[spectra_mask == 0] = 0
+    total_wl = len(spectra)
+
+    def get_equal_spectra_mask():
+        spectra_mask = np.zeros_like(spectra)
+        num_spectra = spectra.shape[1]
+        step_size = int(np.round(total_wl / num_wavelengths))
+        for idx in range(num_wavelengths):
+            num_entries = step_size
+            if (idx + 1) * step_size > total_wl:
+                num_entries = total_wl - idx * step_size
+            sub_mask = np.zeros((num_entries, num_spectra))
+            sub_mask[0, :] = 1
+            [np.random.shuffle(x) for x in sub_mask.T]
+            spectra_mask[idx * step_size: idx * step_size + num_entries, :] = sub_mask
+        return spectra_mask
+
+    def get_random_spectra_mask():
+        spectra_mask = np.zeros_like(spectra)
+        spectra_mask[:num_wavelengths, :] = 1
+        [np.random.shuffle(x) for x in spectra_mask.T]
+        return spectra_mask
+
+    def apply_spectra_mask(_spectra_mask, _spectra):
+        nan_spectra = _spectra.copy()
+        nan_spectra[_spectra_mask == 0] = np.nan
+        _spectra = (_spectra - np.nanmean(nan_spectra, axis=0)[np.newaxis, :]) / np.nanstd(nan_spectra, axis=0)[
+                                                                               np.newaxis, :]
+        _spectra[_spectra_mask == 0] = 0
+        return _spectra
+
+    if strategy == "equal" and num_wavelengths < total_wl/2:
+        spectra = apply_spectra_mask(get_equal_spectra_mask(), spectra)
+    elif strategy == "mixed":
+        equal_mask = get_equal_spectra_mask()
+        random_mask = get_random_spectra_mask()
+
+        spectra = np.hstack([spectra, spectra])
+        mask = np.hstack([equal_mask, random_mask])
+        oxygenations = np.hstack([oxygenations, oxygenations])
+        spectra = apply_spectra_mask(mask, spectra)
+
+    else:
+        spectra = apply_spectra_mask(get_random_spectra_mask(), spectra)
+
     return spectra, oxygenations
 
 
