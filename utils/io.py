@@ -105,6 +105,17 @@ def load_test_data_as_tensorflow_datasets(file_paths, batch_size=1024):
     return spectra
 
 
+def load_full_wl_test_data_as_tensorflow_datasets_oxy(file_paths):
+    spectra, oxy = preprocess_data(file_paths, 41)
+    spectra = np.swapaxes(spectra, 0, 1)
+    spectra = spectra.reshape((len(spectra), len(spectra[0]), 1))
+    oxy = oxy.reshape((len(oxy), 1))
+
+    oxy = tf.convert_to_tensor(oxy)
+    spectra = tf.convert_to_tensor(spectra)
+    return spectra, oxy
+
+
 def load_test_data_as_tensorflow_datasets_with_wavelengths(file_path, wavelengths=None):
     data = np.load(file_path)
     spectra = data["spectra"]

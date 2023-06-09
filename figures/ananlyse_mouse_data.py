@@ -21,8 +21,8 @@ def compile_distance_measures(mouse_data_path):
     results = {}
 
     for folder_path in mouse_data_files:
-
         filename = folder_path.split("/")[-1].split("\\")[-1]
+        print(filename)
         data = np.load(folder_path + "/" + filename + ".npz")
         spectra = data["spectra"]
         test_wl = data["wavelengths"]
@@ -66,7 +66,7 @@ def compile_mouse_results(data_path):
         results["LU"].append(lu[mask])
 
         for model in ALL_MODELS:
-            model_result = np.load(f"{data_path}/{filename}/{filename}_{model}.npz")["estimate"]
+            model_result = np.load(f"{data_path}/{filename}/{filename}_{model}_10.npz")["estimate"]
             model_result = np.reshape(model_result, np.shape(lu))
             results[model].append(model_result[mask])
 
@@ -90,8 +90,8 @@ def load_mouse(mouse_path, best, worst):
     image = spectra[np.argwhere(wavelengths == 800)]
     image = np.squeeze(image)
 
-    best = np.load(mouse_path + "/" + mouse_name + f"_{best}.npz")["estimate"].reshape(*np.shape(image)) * 100
-    worst = np.load(mouse_path + "/" + mouse_name + f"_{worst}.npz")["estimate"].reshape(*np.shape(image)) * 100
+    best = np.load(mouse_path + "/" + mouse_name + f"_{best}_10.npz")["estimate"].reshape(*np.shape(image)) * 100
+    worst = np.load(mouse_path + "/" + mouse_name + f"_{worst}_10.npz")["estimate"].reshape(*np.shape(image)) * 100
 
     image[mask <= 1] = np.nan
     lu[mask <= 1] = np.nan

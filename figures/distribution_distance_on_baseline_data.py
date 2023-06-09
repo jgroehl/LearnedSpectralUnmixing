@@ -1,7 +1,6 @@
 import os
 import glob
 import numpy as np
-from utils.mmd import MMD
 import matplotlib.pyplot as plt
 from utils.constants import ALL_MODELS
 from scipy.stats import iqr, linregress
@@ -11,8 +10,8 @@ from utils.distribution_distance import compute_jsd, compute_kld
 
 def compile_distance_measures(data_path):
     output_file = data_path + "/all_distances.npz"
-    if os.path.exists(output_file):
-        return output_file
+    # if os.path.exists(output_file):
+    #     return output_file
     data_files = [data_path]
 
     all_wl = np.arange(700, 901, 5)
@@ -66,7 +65,7 @@ def compile_results(data_path):
 
     for model in ALL_MODELS:
         print(model)
-        model_result = np.squeeze(np.load(f"{data_path}/baseline_{model}.npz")["estimate"])
+        model_result = np.squeeze(np.load(f"{data_path}/baseline_{model}_41.npz")["estimate"])
         abs_diff = np.abs(model_result - gt) * 100
         rel_diff = abs_diff / gt
         results[model] = np.asarray([np.median(abs_diff), iqr(abs_diff), np.median(rel_diff), iqr(rel_diff)])
@@ -83,38 +82,49 @@ def create_distribution_distance_figure(data_path):
     distances = np.load(distance_file, allow_pickle=True)
     distances = {key: distances[key] for key in distances}
 
-    plt.figure()
-
     dist_mean = []
     dist_std = []
     error_mean = []
     error_std = []
     for model in ALL_MODELS:
-        dist_mean.append(np.mean(distances[model].item()["KLD"]))
-        dist_std.append(np.std(distances[model].item()["KLD"]))
+        dist_mean.append(np.mean(distances[model].item()["JSD"]))
+        dist_std.append(np.std(distances[model].item()["JSD"]))
         error_mean.append(results[model][0])
         error_std.append(results[model][1] / 10)
 
     slope, intercept, r_value, _, _ = linregress(dist_mean, error_mean)
 
-    plt.plot([0, np.max(dist_mean) + 0.2],
+    f, (a0, a1) = plt.subplots(1, 2, width_ratios=[1, 3], layout="constrained")
+
+    a0.violinplot(dist_mean)
+    a0.spines.right.set_visible(False)
+    a0.spines.top.set_visible(False)
+    a0.set_ylabel("Jensen-Shannon divergence", fontweight="bold")
+    a0.set_xticks([], [])
+    a0.set_xlabel("Kernel density\nestimate", fontweight="bold")
+    pos = np.random.normal(1, 0.01, size=np.shape(dist_mean))
+    a0.scatter(pos, dist_mean, c="gray", alpha=0.75)
+    a0.scatter(pos[1], np.mean(distances["BASE"].item()["JSD"]), c="blue", label="BASE")
+    a0.scatter(pos[8], np.mean(distances["ILLUM_POINT"].item()["JSD"]), c="red", label="ILLUM_POINT")
+    a0.scatter(pos[17], np.mean(distances["RES_0.15"].item()["JSD"]), c="green", label="RES_0.15")
+
+    a1.plot([0, np.max(dist_mean) + 0.2],
              [intercept, slope * (np.max(dist_mean) + 0.2) + intercept],
              c="black",
              linestyle="dashed",
              label=f"fit (R={r_value:.2f})")
+    a1.errorbar(dist_mean, error_mean, fmt="o", xerr=dist_std, yerr=error_std, alpha=0.5, ecolor="red", zorder=-20)
+    a1.scatter(dist_mean, error_mean, c="gray")
+    a1.scatter(np.mean(distances["BASE"].item()["JSD"]), results["BASE"][0], c="blue", label="BASE")
+    a1.scatter(np.mean(distances["ILLUM_POINT"].item()["JSD"]), results["ILLUM_POINT"][0], c="red", label="ILLUM_POINT")
+    a1.scatter(np.mean(distances["RES_0.15"].item()["JSD"]), results["RES_0.15"][0], c="green", label="RES_0.15")
 
-    plt.errorbar(dist_mean, error_mean, fmt="o", xerr=dist_std, yerr=error_std, alpha=0.5, ecolor="red", zorder=-20)
-    plt.scatter(dist_mean, error_mean, c="gray")
-    plt.scatter(np.mean(distances["BASE"].item()["KLD"]), results["BASE"][0], c="blue", label="BASE")
-    plt.scatter(np.mean(distances["ILLUM_POINT"].item()["KLD"]), results["ILLUM_POINT"][0], c="red", label="ILLUM_POINT")
-    plt.scatter(np.mean(distances["RES_0.15"].item()["KLD"]), results["RES_0.15"][0], c="green", label="RES_0.15")
+    a1.legend(loc="lower right")
 
-    plt.legend(loc="lower right")
-
-    plt.gca().spines.right.set_visible(False)
-    plt.gca().spines.top.set_visible(False)
-    plt.gca().set_ylabel("Absolute estimation error [%]", fontweight="bold")
-    plt.gca().set_xlabel("Kullback-Leibler divergence", fontweight="bold")
+    a1.spines.right.set_visible(False)
+    a1.spines.top.set_visible(False)
+    a1.set_ylabel("Absolute estimation error [%]", fontweight="bold")
+    a1.set_xlabel("Jensen-Shannon divergence", fontweight="bold")
 
     plt.savefig(data_path + "/distance_vs_results.png", dpi=300)
 

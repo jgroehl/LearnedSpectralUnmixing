@@ -65,7 +65,7 @@ def compile_mouse_results(data_path):
         results["LU"].append(lu[mask])
 
         for model in ALL_MODELS:
-            model_result = np.load(f"{data_path}/{filename}/{filename}_{model}.npz")["estimate"]
+            model_result = np.load(f"{data_path}/{filename}/{filename}_{model}_5.npz")["estimate"]
             model_result = np.reshape(model_result, np.shape(lu))
             results[model].append(model_result[mask])
 
@@ -87,8 +87,8 @@ def load_forearm(forearm_path, best, worst):
     image = spectra[np.argwhere(wavelengths == 800)]
     image = np.squeeze(image)
 
-    best = np.load(forearm_path + "/" + forearm_name + f"_{best}.npz")["estimate"].reshape(*np.shape(image)) * 100
-    worst = np.load(forearm_path + "/" + forearm_name + f"_{worst}.npz")["estimate"].reshape(*np.shape(image)) * 100
+    best = np.load(forearm_path + "/" + forearm_name + f"_{best}_5.npz")["estimate"].reshape(*np.shape(image)) * 100
+    worst = np.load(forearm_path + "/" + forearm_name + f"_{worst}_5.npz")["estimate"].reshape(*np.shape(image)) * 100
 
     return np.squeeze(image), np.squeeze(lu), np.squeeze(best), np.squeeze(worst), np.squeeze(mask)
 

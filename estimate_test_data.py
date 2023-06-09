@@ -48,19 +48,21 @@ def evaluate_baseline_methods(_data_path):
                  estimate=result)
 
 
-def evaluate_distance_from_target_wavelengths(_data_path):
+def evaluate_distance_from_target_wavelengths(_data_path, perform_correction):
     model_path = MODEL_PATH + f"/BASE_LSTM_20.h5"
     model_name = model_path.split("/")[-1].split("\\")[-1].split(f"_LSTM_20")[0]
     print("\t", model_path)
     model_params = LSTMParams.load(model_path)
     model_params.compile()
 
-    for num_wl in range(2, 42, 4):
+    for num_wl in [3, 5, 10, 15, 18, 19, 20, 21, 23, 25, 30, 40, 41]:
         wavelengths = np.linspace(700, 900, num_wl).astype(int)
         wavelengths = (np.around(wavelengths / 5, decimals=0) * 5).astype(int)
         wavelengths = list(wavelengths)
         print(wavelengths)
         _dataset = load_test_data_as_tensorflow_datasets_with_wavelengths(_data_path + "/baseline.npz", wavelengths)
+        if perform_correction:
+            _dataset = _dataset * (20/num_wl)
         results = []
         for i in range(len(_dataset)//200000):
             result = model_params(_dataset[i*200000:(i+1)*200000])
@@ -68,8 +70,10 @@ def evaluate_distance_from_target_wavelengths(_data_path):
         i = len(_dataset)//200000
         results.append(model_params(_dataset[i * 200000:]).numpy())
         result = np.vstack(results)
-        np.savez(f"{_data_path}/baseline_dist_{model_name}_{len(wavelengths)}.npz",
+        corr = "corr" if perform_correction else ""
+        np.savez(f"{_data_path}/baseline_dist{corr}_{model_name}_{len(wavelengths)}.npz",
                  estimate=result)
+
 
 # for folder_path in glob.glob(TEST_DATA_PATH + "/mouse/*"):
 #     if not os.path.isdir(folder_path):
@@ -80,17 +84,17 @@ def evaluate_distance_from_target_wavelengths(_data_path):
 #     wavelengths = np.load(data_path)["wavelengths"]
 #     dataset = load_test_data_as_tensorflow_datasets(data_path)
 #     evaluate(dataset, data_path, len(wavelengths))
-
-
+#
+#
 # data_path = TEST_DATA_PATH + "/baseline/baseline.npz"
 # wavelengths = list(np.arange(700, 901, 5))
 # dataset = load_test_data_as_tensorflow_datasets_with_wavelengths(data_path, wavelengths)
 # evaluate(dataset, data_path, len(wavelengths))
+#
+#
+# evaluate_baseline_methods(TEST_DATA_PATH + "/baseline/")
 
-
-evaluate_baseline_methods(TEST_DATA_PATH + "/baseline/")
-
-evaluate_distance_from_target_wavelengths(TEST_DATA_PATH + "/baseline/")
+evaluate_distance_from_target_wavelengths(TEST_DATA_PATH + "/baseline/", perform_correction=True)
 
 # results = dict()
 # for folder_path in glob.glob(TEST_DATA_PATH + "/forearm/*"):
