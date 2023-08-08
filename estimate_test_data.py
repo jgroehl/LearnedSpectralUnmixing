@@ -88,7 +88,7 @@ def evaluate_distance_from_target_wavelengths(_data_path, perform_correction):
 #
 # data_path = TEST_DATA_PATH + "/baseline/baseline.npz"
 # wavelengths = list(np.arange(700, 901, 5))
-# dataset = load_test_data_as_tensorflow_datasets_with_wavelengths(data_path, wavelengths)
+dataset = load_test_data_as_tensorflow_datasets_with_wavelengths(data_path, wavelengths)
 # evaluate(dataset, data_path, len(wavelengths))
 #
 #

@@ -1,6 +1,7 @@
 from patato.core.image_structures.reconstruction_image import Reconstruction
 from patato.unmixing.unmixer import SpectralUnmixer, SO2Calculator
 
+
 def linear_unmixing(spectra, wavelengths):
 
     r = Reconstruction(spectra, wavelengths,
