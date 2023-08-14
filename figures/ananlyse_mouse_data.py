@@ -7,10 +7,11 @@ from paths import TRAINING_DATA_PATH, TEST_DATA_PATH
 from utils.distribution_distance import compute_jsd
 from utils.compute_ensemble_average import compute_ensemble_average
 
+RECOMPUTE = True
 
 def compile_distance_measures(mouse_data_path):
     output_file = mouse_data_path + "/all_distances.npz"
-    if os.path.exists(output_file):
+    if not RECOMPUTE and os.path.exists(output_file):
         return output_file
     mouse_data_files = []
     for folder_path in glob.glob(mouse_data_path + "/*"):
@@ -21,8 +22,8 @@ def compile_distance_measures(mouse_data_path):
     results = {}
 
     for folder_path in mouse_data_files:
+
         filename = folder_path.split("/")[-1].split("\\")[-1]
-        print(filename)
         data = np.load(folder_path + "/" + filename + ".npz")
         spectra = data["spectra"]
         test_wl = data["wavelengths"]
@@ -45,7 +46,7 @@ def compile_distance_measures(mouse_data_path):
 
 def compile_mouse_results(data_path):
     output_file = data_path + "/all_results.npz"
-    if os.path.exists(output_file):
+    if not RECOMPUTE and os.path.exists(output_file):
         return output_file
     mouse_data_files = []
     for folder_path in glob.glob(data_path + "/*"):
@@ -60,7 +61,6 @@ def compile_mouse_results(data_path):
     for folder_path in mouse_data_files:
         filename = folder_path.split("/")[-1].split("\\")[-1]
         data = np.load(folder_path + "/" + filename + ".npz")
-        plt.figure()
         lu = data["lu"]
         mask = data["reference_mask"] == 6
         results["LU"].append(lu[mask])

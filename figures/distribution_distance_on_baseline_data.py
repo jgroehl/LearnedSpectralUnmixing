@@ -10,8 +10,8 @@ from utils.distribution_distance import compute_jsd, compute_kld
 
 def compile_distance_measures(data_path):
     output_file = data_path + "/all_distances.npz"
-    # if os.path.exists(output_file):
-    #     return output_file
+    if os.path.exists(output_file):
+        return output_file
     data_files = [data_path]
 
     all_wl = np.arange(700, 901, 5)
@@ -104,9 +104,10 @@ def create_distribution_distance_figure(data_path):
     a0.set_xlabel("Kernel density\nestimate", fontweight="bold")
     pos = np.random.normal(1, 0.01, size=np.shape(dist_mean))
     a0.scatter(pos, dist_mean, c="gray", alpha=0.75)
-    a0.scatter(pos[1], np.mean(distances["BASE"].item()["JSD"]), c="blue", label="BASE")
-    a0.scatter(pos[8], np.mean(distances["ILLUM_POINT"].item()["JSD"]), c="red", label="ILLUM_POINT")
-    a0.scatter(pos[17], np.mean(distances["RES_0.15"].item()["JSD"]), c="green", label="RES_0.15")
+    a0.scatter(pos[2], np.mean(distances["BASE"].item()["JSD"]), c="blue", label="BASE")
+    a0.scatter(pos[9], np.mean(distances["ILLUM_POINT"].item()["JSD"]), c="red", label="ILLUM_POINT")
+    a0.scatter(pos[18], np.mean(distances["RES_0.15"].item()["JSD"]), c="green", label="RES_0.15")
+    a0.scatter(pos[1], np.mean(distances["ALL"].item()["JSD"]), c="purple", label="ALL")
 
     a1.plot([0, np.max(dist_mean) + 0.2],
              [intercept, slope * (np.max(dist_mean) + 0.2) + intercept],
@@ -118,6 +119,7 @@ def create_distribution_distance_figure(data_path):
     a1.scatter(np.mean(distances["BASE"].item()["JSD"]), results["BASE"][0], c="blue", label="BASE")
     a1.scatter(np.mean(distances["ILLUM_POINT"].item()["JSD"]), results["ILLUM_POINT"][0], c="red", label="ILLUM_POINT")
     a1.scatter(np.mean(distances["RES_0.15"].item()["JSD"]), results["RES_0.15"][0], c="green", label="RES_0.15")
+    a1.scatter(np.mean(distances["ALL"].item()["JSD"]), results["ALL"][0], c="purple", label="ALL")
 
     a1.legend(loc="lower right")
 

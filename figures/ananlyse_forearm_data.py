@@ -7,10 +7,12 @@ from paths import TRAINING_DATA_PATH, TEST_DATA_PATH
 from utils.distribution_distance import compute_jsd
 from utils.compute_ensemble_average import compute_ensemble_average
 
+RECOMPUTE = True
+
 
 def compile_distance_measures(forearm_data_path):
     output_file = forearm_data_path + "/all_distances.npz"
-    if os.path.exists(output_file):
+    if not RECOMPUTE and os.path.exists(output_file):
         return output_file
     forearm_data_files = []
     for folder_path in glob.glob(forearm_data_path + "/*"):
@@ -45,7 +47,7 @@ def compile_distance_measures(forearm_data_path):
 
 def compile_mouse_results(data_path):
     output_file = data_path + "/all_results.npz"
-    if os.path.exists(output_file):
+    if not RECOMPUTE and os.path.exists(output_file):
         return output_file
     mouse_data_files = []
     for folder_path in glob.glob(data_path + "/*"):

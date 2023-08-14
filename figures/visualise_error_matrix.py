@@ -9,28 +9,8 @@ with open(f"{TEST_DATA_PATH}/result_matrix.json", "r+") as json_file:
     result_matrix_dict = json.load(json_file)
 
 # ALL
-# title= "ALL"
-# indices = np.arange(len(ALL_MODELS)).astype(int)
-
-# INVIS
-# title = "INVIS"
-# indices = np.asarray([9, 10, 11, 12])
-
-# RES
-# title = "RES"
-# indices = np.asarray([20, 19, 1, 17])
-
-# BACKGROUND
-# title = "BACKGROUND"
-# indices = np.asarray([1, 3, 2, 4])
-
-# ACOUS
-# title = "ACOUS"
-# indices = np.asarray([1, 0, 10, 14])
-
-# SKIN
-title = "SKIN"
-indices = np.asarray([1, 11, 16, 21])
+title= "ALL"
+indices = np.arange(len(ALL_MODELS)).astype(int)
 
 all_results_heatmap = np.zeros((len(ALL_MODELS), len(ALL_MODELS)))
 all_results_heatmap_norm_train = np.zeros((len(ALL_MODELS), len(ALL_MODELS)))

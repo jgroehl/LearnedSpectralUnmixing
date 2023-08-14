@@ -21,9 +21,6 @@ for filename in glob.glob(test_data_path + "*_dist_BASE*"):
     wls.append(num_wl)
     results.append(np.abs(data-ground_truth) * 100)
     est_oxy.append(data)
-    data_corr = np.squeeze(np.load(filename.replace("_dist_", "_distcorr_"))["estimate"])
-    results_corr.append(np.abs(data_corr - ground_truth) * 100)
-    est_oxy_corr.append(data_corr)
 
 wls = np.asarray(wls)
 sort_idx = np.argsort(wls)
@@ -32,11 +29,6 @@ results = np.asarray(results)[sort_idx]
 est_oxy = np.asarray(est_oxy)[sort_idx]
 median_results = np.median(results, axis=1)
 iqr_results = iqr(results, axis=1)
-
-results_corr = np.asarray(results_corr)[sort_idx]
-est_oxy_corr = np.asarray(est_oxy_corr)[sort_idx]
-median_results_corr = np.median(results_corr, axis=1)
-iqr_results_corr = iqr(results_corr, axis=1)
 
 random_points = np.random.choice(len(ground_truth), 10000, replace=False)
 
@@ -61,9 +53,7 @@ subfigs = fig.subfigures(1, 2, wspace=0.07)
 ax0 = subfigs[0].subplots(1, 1)
 
 ax0.plot(wls, median_results, c="blue", label="uncorrected")#, yerr=(iqr_results/2), ecolor="red")
-ax0.plot(wls, median_results_corr, c="orange", label="corrected")
 ax0.plot(wls, median_results, "o", c="blue", zorder=5)
-ax0.plot(wls, median_results_corr, "o", c="orange", zorder=5)
 ax0.spines.right.set_visible(False)
 ax0.spines.top.set_visible(False)
 ax0.vlines(20, 5, 30, color="green")
