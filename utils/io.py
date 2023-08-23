@@ -120,14 +120,16 @@ def load_test_data_as_tensorflow_datasets_with_wavelengths(file_path, wavelength
     data = np.load(file_path)
     spectra = data["spectra"]
     data_wl = data["wavelengths"]
+    all_wl = np.arange(700, 901, 5)
 
-    if wavelengths:
+    if wavelengths is not None:
         wl_mask = [wl in wavelengths for wl in data_wl]
+        all_wl_mask = [wl in wavelengths for wl in all_wl]
         inv_wl_mask = np.invert(wl_mask)
         spectra[inv_wl_mask, :] = np.nan
         spectra = (spectra - np.nanmean(spectra, axis=0)[np.newaxis, :]) / np.nanstd(spectra, axis=0)[np.newaxis, :]
         full_spectra = np.zeros((41, len(spectra[0])))
-        full_spectra[wl_mask, :] = spectra[wl_mask, :]
+        full_spectra[all_wl_mask, :] = spectra[wl_mask, :]
         spectra = full_spectra
 
     spectra = np.swapaxes(spectra, 0, 1)

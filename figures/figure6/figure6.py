@@ -116,7 +116,8 @@ def load_example(path, best, worst, model_1, model_2):
     model_1 = np.load(path + "/" + name + f"_{model_1}_{len(wavelengths)}.npz")["estimate"].reshape(*np.shape(image)) * 100
     model_2 = np.load(path + "/" + name + f"_{model_2}_{len(wavelengths)}.npz")["estimate"].reshape(*np.shape(image)) * 100
 
-    return (np.squeeze(image), np.squeeze(lu), np.squeeze(best), np.squeeze(worst), np.squeeze(model_1),
+    return (np.squeeze(image), np.squeeze(lu), np.squeeze(best),
+            np.squeeze(worst), np.squeeze(model_1),
             np.squeeze(model_2), np.squeeze(mask))
 
 
@@ -164,19 +165,14 @@ def create_forearm_figure(models):
     models_mouse, means_mouse, means_mouse_kidney, best_mouse, worst_mouse = load_data(mouse_data_path,
                                                                                        models, mouse=True)
 
-    fig = plt.figure(layout="constrained", figsize=(12, 5.5))
-    gs = gridspec.GridSpec(ncols=24, nrows=2, figure=fig)
+    fig = plt.figure(layout="constrained", figsize=(9, 9))
+    gs = gridspec.GridSpec(ncols=3, nrows=4, figure=fig,
+                           height_ratios=[1.1, 1, 1.5, 1.5],
+                           width_ratios=[1.2, 1, 1])
 
-    subfig_1 = fig.add_subfigure(gs[0, 0:5])
-    subfig_2 = fig.add_subfigure(gs[0, 5:12])
-    subfig_3 = fig.add_subfigure(gs[0, 12:18])
-    subfig_4 = fig.add_subfigure(gs[0, 18:24])
-
+    subfig_1 = fig.add_subfigure(gs[0, 0])
+    subfig_1.text(0, 0.87, "A", size=20, weight='bold')
     ax1 = subfig_1.subplots(1, 1)
-    ax2 = subfig_2.subplots(1, 1)
-    ax3 = subfig_3.subplots(1, 1)
-    ax4 = subfig_4.subplots(1, 1)
-
     model_names_forearm = np.copy(models_forearm)
     model_names_mouse = np.copy(models_mouse)
 
@@ -193,13 +189,13 @@ def create_forearm_figure(models):
     ax1.set_xticks(np.arange(len(models_forearm)) + 1, models_forearm, fontsize=8)
     ax1.spines.right.set_visible(False)
     ax1.spines.top.set_visible(False)
-    ax1.set_ylabel("Estimated sO$_2$ [%]", fontweight="bold", labelpad=-5)
+    ax1.set_ylabel("Est. sO$_2$ [%]", fontweight="bold", labelpad=-5)
 
     def add_image(ax, img, data, mask, title, color="red", mouse=False, colorbar=False):
         ax.set_title(title)
         if colorbar:
             cbar = plt.colorbar(img, location="left", pad=0)
-            cbar.set_label("Estimated sO$_2$ [%]", fontweight="bold", labelpad=-5)
+            cbar.set_label("Est. sO$_2$ [%]", fontweight="bold", labelpad=-5)
         data[data < 1e-5] = 1e-5
         data[data > 100 - 1e-5] = 100 - 1e-5
         if mouse:
@@ -207,45 +203,65 @@ def create_forearm_figure(models):
             ax.contour(mask == 6, colors="red")
         else:
             ax.contour(mask == 1, colors=color)
+        ydim, xdim = np.shape(image)
         hist, bins = np.histogram(data, bins=50, range=(0, 100))
-        ax.plot([len(data), len(data)], [0, len(data)-2], c="black", linewidth=1)
-        ax.stairs(len(data) + (hist / np.max(hist) * (len(data)/5)), (bins[::-1] / 100 * len(data)), orientation="horizontal",
-                  baseline=len(data), fill=True, color="lightgray")
-        ax.stairs(len(data) + (hist / np.max(hist) * (len(data)/5)), (bins[::-1] / 100 * len(data)), orientation="horizontal",
-                  baseline=len(data), fill=False, color="black", linewidth=1)
+        ax.plot([xdim, xdim], [0, ydim-2], c="black", linewidth=1)
+        ax.stairs(xdim + (hist / np.max(hist) * (xdim/5)), (bins[::-1] / 100 * ydim), orientation="horizontal",
+                  baseline=xdim, fill=True, color="lightgray")
+        ax.stairs(xdim + (hist / np.max(hist) * (xdim/5)), (bins[::-1] / 100 * ydim), orientation="horizontal",
+                  baseline=xdim, fill=False, color="black", linewidth=1)
 
         if mouse:
             mean_kidney_sO2 = (1-(np.mean(data[mask == VENOUS_MASK]) / 100)) * len(data)
             mean_arterial_sO2 = (1-(np.mean(data[mask == 6]) / 100)) * len(data)
-            ax.plot([len(data)+2, len(data) + (len(data)/5)], [mean_arterial_sO2, mean_arterial_sO2], c="red", linewidth=2)
-            ax.plot([len(data) + 2, len(data) + (len(data)/5)], [mean_kidney_sO2, mean_kidney_sO2], c="blue", linewidth=2)
+            ax.plot([xdim+2, xdim + (xdim/5)], [mean_arterial_sO2, mean_arterial_sO2], c="red", linewidth=2)
+            ax.plot([xdim + 2, xdim + (xdim/5)], [mean_kidney_sO2, mean_kidney_sO2], c="blue", linewidth=2)
         else:
             mean_arterial_sO2 = (1-(np.mean(data[mask == 1]) / 100)) * len(data)
-            ax.plot([len(data) + 2, len(data) + (len(data)/5)], [mean_arterial_sO2, mean_arterial_sO2], c="red", linewidth=2)
+            ax.plot([xdim + 2, xdim + (xdim/5)], [mean_arterial_sO2, mean_arterial_sO2], c="red", linewidth=2)
         ax.axis("off")
+
+    subfig_1 = fig.add_subfigure(gs[0, 1])
+    subfig_1.text(0, 0.88, "B", size=20, weight='bold')
+    subfig_2 = fig.add_subfigure(gs[0, 2])
+    subfig_2.text(0, 0.87, "C", size=20, weight='bold')
+    subfig_3 = fig.add_subfigure(gs[1, 1])
+    subfig_3.text(0, 0.92, "E", size=20, weight='bold')
+    subfig_4 = fig.add_subfigure(gs[1, 2])
+    subfig_4.text(0, 0.92, "F", size=20, weight='bold')
+    subfig_5 = fig.add_subfigure(gs[1, 0])
+    subfig_5.text(0, 0.95, "D", size=20, weight='bold')
+    ax1 = subfig_1.subplots(1, 1)
+    ax2 = subfig_2.subplots(1, 1)
+    ax3 = subfig_3.subplots(1, 1)
+    ax4 = subfig_4.subplots(1, 1)
+    ax5 = subfig_5.subplots(1, 1)
 
     image, lu, best, worst, model_1, model_2, mask = load_example(forearm_data_path + "/Forearm_07",
                                                                   ALL_MODELS[best_forearm], ALL_MODELS[worst_forearm],
                                                                   "BASE", "ALL")
-    add_image(ax2, ax2.imshow(lu, vmin=0, vmax=100), lu, mask, "Linear Unmixing", colorbar=True)
+    LOWER = 130
+    UPPER = 350
+    image = image[LOWER:UPPER, :]
+    lu = lu[LOWER:UPPER, :]
+    best = best[LOWER:UPPER, :]
+    worst = worst[LOWER:UPPER, :]
+    model_1 = model_1[LOWER:UPPER, :]
+    model_2 = model_2[LOWER:UPPER, :]
+    mask = mask[LOWER:UPPER, :]
+    ax1.imshow(image, cmap="magma", vmin=-1000, vmax=5000)
+    ax1.set_title("PA Image [a.u.]")
+    ax1.axis("off")
+    add_image(ax2, ax2.imshow(lu, vmin=0, vmax=100), lu, mask, "Linear Unmixing")
     add_image(ax3, ax3.imshow(best, vmin=0, vmax=100), best, mask, f"Best: {model_names_forearm[-2]}")
     add_image(ax4, ax4.imshow(worst, vmin=0, vmax=100), worst, mask, f"Worst: {model_names_forearm[-1]}")
+    add_image(ax5, ax5.imshow(model_1, vmin=0, vmax=100), model_1, mask, f"{model_names_forearm[-4]}", colorbar=True)
     # add_image(ax5, ax5.imshow(model_1, vmin=0, vmax=100), model_1, mask, "BASE")
     # add_image(ax6, ax6.imshow(model_2, vmin=0, vmax=100), model_2, mask, "ALL")
 
-    subfig_7 = fig.add_subfigure(gs[1, 0:5])
-    subfig_8 = fig.add_subfigure(gs[1, 5:12])
-    subfig_9 = fig.add_subfigure(gs[1, 12:18])
-    subfig_10 = fig.add_subfigure(gs[1, 18:24])
-    # subfig_11 = fig.add_subfigure(gs[2, 12:18])
-    # subfig_12 = fig.add_subfigure(gs[2, 18:24])
-
+    subfig_7 = fig.add_subfigure(gs[2, 0])
+    subfig_7.text(0, 0.9, "G", size=20, weight='bold')
     ax7 = subfig_7.subplots(1, 1)
-    ax8 = subfig_8.subplots(1, 1)
-    ax9 = subfig_9.subplots(1, 1)
-    ax10 = subfig_10.subplots(1, 1)
-    # ax11 = subfig_11.subplots(1, 1)
-    # ax12 = subfig_12.subplots(1, 1)
 
     ax7.set_title("Mouse scans (N=7)")
     ax7.fill_between([0.3, len(models_mouse) + 0.7], 94, 98, color="red", alpha=0.25)
@@ -267,19 +283,52 @@ def create_forearm_figure(models):
     ax7.set_xticks(np.arange(len(models_mouse)) + 1, models_mouse, fontsize=8)
     ax7.spines.right.set_visible(False)
     ax7.spines.top.set_visible(False)
-    ax7.set_ylabel("Estimated sO$_2$ [%]", fontweight="bold", labelpad=-5)
+    ax7.set_ylabel("Est. sO$_2$ [%]", fontweight="bold", labelpad=-5)
 
     image, lu, best, worst, model_1, model_2, mask = load_example(mouse_data_path + "/Mouse_02",
                                                                   ALL_MODELS[best_mouse], ALL_MODELS[worst_mouse],
                                                                   "BASE", "ALL")
-    print(np.mean(worst[mask==4]))
-    add_image(ax8, ax8.imshow(lu, vmin=0, vmax=100), lu, mask, "Linear Unmixing", mouse=True, colorbar=True)
+
+    subfig_7 = fig.add_subfigure(gs[2, 1])
+    subfig_7.text(0., 0.93, "H", size=20, weight='bold')
+    subfig_8 = fig.add_subfigure(gs[2, 2])
+    subfig_8.text(0, 0.93, "I", size=20, weight='bold')
+    subfig_9 = fig.add_subfigure(gs[3, 1])
+    subfig_9.text(0, 0.93, "K", size=20, weight='bold')
+    subfig_10 = fig.add_subfigure(gs[3, 2])
+    subfig_10.text(0, 0.93, "L", size=20, weight='bold')
+    subfig_11 = fig.add_subfigure(gs[3, 0])
+    subfig_11.text(0.01, 0.93, "J", size=20, weight='bold')
+    ax7 = subfig_7.subplots(1, 1)
+    ax8 = subfig_8.subplots(1, 1)
+    ax9 = subfig_9.subplots(1, 1)
+    ax10 = subfig_10.subplots(1, 1)
+    ax11 = subfig_11.subplots(1, 1)
+
+    lu = np.copy(lu)
+    best = np.copy(best)
+    worst = np.copy(worst)
+
+    lu[mask < 2] = np.nan
+    best[mask < 2] = np.nan
+    worst[mask < 2] = np.nan
+    model_1[mask < 2] = np.nan
+    ax7.imshow(image, cmap="magma", vmin=50, vmax=450)
+    ax8.imshow(image, cmap="magma", vmin=50, vmax=450)
+    ax9.imshow(image, cmap="magma", vmin=50, vmax=450)
+    ax10.imshow(image, cmap="magma", vmin=50, vmax=450)
+    ax11.imshow(image, cmap="magma", vmin=50, vmax=450)
+    ax7.set_title("PA Image [a.u.]")
+    ax7.axis("off")
+    add_image(ax8, ax8.imshow(lu, vmin=0, vmax=100), lu, mask, "Linear Unmixing", mouse=True)
     add_image(ax9, ax9.imshow(best, vmin=0, vmax=100), best, mask, f"Best: {model_names_mouse[-2]}", mouse=True)
     add_image(ax10, ax10.imshow(worst, vmin=0, vmax=100), worst, mask, f"Worst: {model_names_mouse[-1]}", mouse=True)
+    add_image(ax11, ax11.imshow(model_1, vmin=0, vmax=100), model_1, mask, f"{model_names_mouse[-4]}",
+              mouse=True, colorbar=True)
     # add_image(ax11, ax11.imshow(model_1, vmin=0, vmax=100), model_1, mask, "BASE", mouse=True)
     # add_image(ax12, ax12.imshow(model_2, vmin=0, vmax=100), model_2, mask, "ALL", mouse=True)
 
-    plt.savefig("figure5.png", dpi=300)
+    plt.savefig("figure6.png", dpi=300)
 
 
 if __name__ == "__main__":
