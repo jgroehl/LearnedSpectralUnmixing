@@ -13,7 +13,7 @@ VENOUS_MASK = 5
 
 def compile_distance_measures(data_path):
     output_file = data_path + "/all_distances.npz"
-    if os.path.exists(output_file):
+    if not RECOMPUTE and os.path.exists(output_file):
         return output_file
     data_files = []
     for folder_path in glob.glob(data_path + "/*"):

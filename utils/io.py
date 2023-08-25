@@ -147,11 +147,17 @@ def preprocess_test_data(file_path):
     input_wavelengths = np.arange(700, 901, 5)
     wl_mask = np.isin(input_wavelengths, wavelengths)
 
-    if len(np.shape(spectra)) > 2:
-        spectra = np.swapaxes(spectra, 0, 1)
-        spectra = np.swapaxes(spectra, 1, 2)
-        spectra = spectra.reshape((np.shape(spectra)[0]**2, -1))
-        spectra = np.swapaxes(spectra, 0, 1)
+    if len(np.shape(spectra)) == 3:  # [WL, X, Y]
+        spectra = np.swapaxes(spectra, 0, 1)  # [X, WL, Y]
+        spectra = np.swapaxes(spectra, 1, 2)  # [X, Y, WL]
+        spectra = spectra.reshape((np.shape(spectra)[0]**2, -1))  # [X * Y, WL]
+        spectra = np.swapaxes(spectra, 0, 1)   # [WL, X * Y]
+
+    if len(np.shape(spectra)) == 4:  # [POS, WL, X, Y]
+        spectra = np.swapaxes(spectra, 1, 2)  # [POS, X, WL, Y]
+        spectra = np.swapaxes(spectra, 2, 3)  # [POS, X, Y, WL]
+        spectra = spectra.reshape((-1, len(wavelengths)))  # [POS * X * Y, WL]
+        spectra = np.swapaxes(spectra, 0, 1)  # [WL, POS * X * Y]
 
     spectra = (spectra - np.nanmean(spectra, axis=0)[np.newaxis, :]) / np.nanstd(spectra, axis=0)[np.newaxis, :]
     print(np.shape(spectra))
