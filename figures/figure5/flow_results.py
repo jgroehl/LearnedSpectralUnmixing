@@ -3,10 +3,13 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from utils.constants import ALL_MODELS
-from paths import TRAINING_DATA_PATH, TEST_DATA_PATH
+from paths import TRAINING_DATA_PATH, TEST_DATA_PATH, MODEL_PATH
 from utils.distribution_distance import compute_jsd
 import matplotlib.gridspec as gridspec
 from matplotlib_scalebar.scalebar import ScaleBar
+from models import LSTMParams
+from utils.io import load_test_data_as_tensorflow_datasets_with_wavelengths
+from sklearn.ensemble import RandomForestRegressor as LSDMethod
 
 RECOMPUTE = False
 
@@ -115,73 +118,156 @@ def load_data(path, models):
 
     models = [["LU"] + models + [ALL_MODELS[bd], ALL_MODELS[wd]] for bd, wd in zip(best_dist, worst_dist)]
 
-
     return models, results, best_dist, worst_dist
 
 
 def create_flow_figure(models):
 
+    print("Loading and processing data.")
     example_data = np.load(fr"{TEST_DATA_PATH}\flow/flow_1/examples.npz")
+
+    flow_data_for_lsd = np.load(fr"{TEST_DATA_PATH}\flow/flow_1/flow_1.npz")
+    test_lsd_spectra = flow_data_for_lsd["spectra"][:-1, :]
+    test_lsd_spectra = ((test_lsd_spectra - np.nanmean(test_lsd_spectra, axis=0)[np.newaxis, :]) /
+                        np.nanstd(test_lsd_spectra, axis=0)[np.newaxis, :])
+
+    data = example_data["recon"][-168:]
+    # apply LSTM method to the data
+    data = data.swapaxes(0, 1)
+    data_shape = np.shape(data)
+    data = data.reshape((11, -1))
+    wavelengths = example_data["wavelengths"][:-1]
+    np.savez("tmp_data.npz",
+             spectra=data,
+             wavelengths=example_data["wavelengths"])
+    data_lstm = load_test_data_as_tensorflow_datasets_with_wavelengths("tmp_data.npz", example_data["wavelengths"][:-1])
+
+    print("LSD estimates.")
+    if os.path.exists("lsd_results.npz"):
+        res = np.load("lsd_results.npz")
+        lsd_result = res["lsd_result"]
+        lsd_timestep_results = res["lsd_timestep_results"]
+    else:
+        train_data = np.load(TRAINING_DATA_PATH + "SMALL/SMALL_train.npz")
+        train_spectra = train_data["spectra"]
+        train_spectra = (train_spectra - np.nanmean(train_spectra, axis=0)[np.newaxis, :]) / np.nanstd(train_spectra, axis=0)[np.newaxis, :]
+        oxy = train_data["oxygenation"]
+        all_wl = np.arange(700, 901, 5)
+        all_wl_mask = [wl in wavelengths for wl in all_wl]
+        train_spectra = train_spectra[all_wl_mask, :]
+
+        lsd_rf = LSDMethod(n_jobs=-1)
+        lsd_rf.fit(train_spectra.T, oxy)
+
+        flow_spectra = data[:-1, :]
+        flow_spectra = (flow_spectra - np.nanmean(flow_spectra, axis=0)[np.newaxis, :]) / np.nanstd(flow_spectra,
+                                                                                                    axis=0)[np.newaxis, :]
+        lsd_result = lsd_rf.predict(flow_spectra.T)
+
+        lsd_result = np.reshape(lsd_result, (1, data_shape[1], data_shape[2], data_shape[3], data_shape[4]))
+        lsd_result = lsd_result.swapaxes(0, 1) * 100
+
+        lsd_timestep_results = lsd_rf.predict(test_lsd_spectra.T)
+
+        np.savez("lsd_results.npz",
+                 lsd_result=lsd_result,
+                 lsd_timestep_results=lsd_timestep_results)
+
+    print("LSTM estimates.")
+    if os.path.exists("lstm_result.npz"):
+        res = np.load("lstm_result.npz")
+        lstm_result = res["lstm_result"]
+    else:
+        model_params = LSTMParams.load(MODEL_PATH + f"SMALL_LSTM_10.h5")
+        model_params.compile()
+        results = []
+        for i in range(len(data_lstm) // 200000):
+            result = model_params(data_lstm[i * 200000:(i + 1) * 200000])
+            results.append(result.numpy())
+        i = len(data_lstm) // 200000
+        results.append(model_params(data_lstm[i * 200000:]).numpy())
+        lstm_result = np.vstack(results)
+        lstm_result = np.reshape(lstm_result, (1, data_shape[1], data_shape[2], data_shape[3], data_shape[4]))
+        lstm_result = lstm_result.swapaxes(0, 1) * 100
+        np.savez("lstm_result.npz",
+                 lstm_result=lstm_result)
+
 
     flow_data_path = fr"{TEST_DATA_PATH}\flow/"
 
     models_flow, flow_estimates, best_flow, worst_flow = load_data(flow_data_path, models)
 
     fig = plt.figure(layout="constrained", figsize=(12, 5.5))
-    gs = gridspec.GridSpec(ncols=2, nrows=2, figure=fig, height_ratios=[1.17, 2])
+    gs = gridspec.GridSpec(ncols=2, nrows=3, figure=fig)
 
-    subfigs = [fig.add_subfigure(gs[1, 0]), fig.add_subfigure(gs[1, 1])]
+    subfig = fig.add_subfigure(gs[1:3, 0])
     legend = True
 
-    for subfig, models, estimates, best, worst in zip(subfigs, models_flow, flow_estimates, best_flow, worst_flow):
+    models, estimates, best, worst = models_flow[0], flow_estimates[0], best_flow[0], worst_flow[0]
 
-        ax = subfig.subplots(1, 1)
-        timesteps = estimates["timesteps"]
-        timesteps = timesteps - min(timesteps)
-        timesteps = timesteps / 60
-        ts = np.unique(timesteps)
-        n_ts = len(ts)
-        timesteps = timesteps.reshape((n_ts, -1))
-        reference = estimates["reference"].reshape((n_ts, -1))
+    ax = subfig.subplots(1, 1)
+    timesteps = estimates["timesteps"]
+    timesteps = timesteps - min(timesteps)
+    timesteps = timesteps / 60
+    ts = np.unique(timesteps)
+    n_ts = len(ts)
+    timesteps = timesteps.reshape((n_ts, -1))
+    reference = estimates["reference"].reshape((n_ts, -1))
 
-        def add_line(val, color, label, linestyle="solid"):
-            val = val.copy()
-            val = val - reference
-            val = val.astype(float)
-            mean = np.mean(val, axis=1) * 100
-            std = np.std(val, axis=1) * 100
-            ax.plot(np.mean(reference, axis=1)*100, mean, color=color, label=label, linestyle=linestyle)
-            ax.fill_between(np.mean(reference, axis=1)*100, mean-std, mean+std, color=color, alpha=0.1)
-            ax.invert_xaxis()
+    def add_line(val, color, label, linestyle="solid"):
+        val = val.copy()
+        #val = val - reference
+        val = val.astype(float)
+        mean = np.mean(val, axis=1) * 100
+        ax.plot(ts, mean, color=color, label=label, linestyle=linestyle)
 
-        add_line(reference, "black", "pO$_2$ reference", linestyle="dashed")
+    def add_scatter(val, color, label, linestyle="solid"):
+        val = val.copy()
+        #val = val - reference
+        val = val.astype(float)
+        mean = np.mean(val, axis=1) * 100
+        # np.mean(reference, axis=1)*100
+        ax.scatter(ts, mean, color=color, label=label, linestyle=linestyle, s=3)
 
-        add_line(estimates["LU"].reshape((n_ts, -1)), "black", "Linear Unmixing")
-        add_line(estimates["SMALL"].reshape((n_ts, -1)), "purple", "SMALL")
-        add_line(estimates["ILLUM_POINT"].reshape((n_ts, -1)), "red", "ILLUM_POINT")
-        add_line(estimates["WATER_4cm"].reshape((n_ts, -1)), "#03A9F4", "WATER_4cm")
+    add_line(reference, "black", "sO$_2$ reference (Severinghaus)", linestyle="dashed")
 
-        ax.set_xlabel("pO$_2$ reference [%]", fontweight="bold", fontsize=12)
-        ax.set_ylabel("(estimate - pO$_2$ ref.) [%]", fontweight="bold", fontsize=12)
+    mae_lstm = np.median(np.abs(estimates["SMALL"].reshape((n_ts, -1)) - reference)) * 100
+    mae_lsd = np.median(np.abs(lsd_timestep_results.reshape((n_ts, -1)) - reference)) * 100
 
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.set_ylim(-30, 35)
-        if legend:
-            ax.legend(loc="upper left", labelspacing=0, framealpha=0)
-        legend = not legend
+    add_scatter(lsd_timestep_results.reshape((n_ts, -1)), "orange",
+                fr"Learned Spectral Decolouring ($\epsilon$sO$_2$: {mae_lsd:.1f}%)")
+    add_scatter(estimates["SMALL"].reshape((n_ts, -1)), "purple",
+                fr"LSTM-based method ($\epsilon$sO$_2$: {mae_lstm:.1f}%)")
 
-    subfigs[0].text(0.01, 0.92, "C", size=30, weight='bold')
-    subfigs[1].text(0.01, 0.92, "D", size=30, weight='bold')
+    ax.set_ylabel("sO$_2$ reference [%]", fontweight="bold", fontsize=12)
+    ax.set_xlabel("Time [min]", fontweight="bold", fontsize=12)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    #ax.set_ylim(-20, 20)
+    if legend:
+        ax.legend(loc="upper right", labelspacing=1, framealpha=0)
+    legend = not legend
+
+    subfig.text(-0.005, 0.92, "B", size=30, weight='bold')
 
     subfig_images = fig.add_subfigure(gs[0, 0:2])
     ex_signal = example_data["recon"]
-    ex_sO2 = example_data["sO2"] * 100
+    ex_sO2 = example_data["sO2"][-168:] * 100
     ex_sO2[0, :, 0:10, 0:10, :] = np.nan
+    lstm_result[0, :, 0:10, 0:10, :] = np.nan
+    lsd_result[0, :, 0:10, 0:10, :] = np.nan
+
+    ex_sO2[:, :, -5:, :, :] = np.nan
+    lstm_result[:, :, -5:, :, :] = np.nan
+    lsd_result[:, :, -5:, :, :] = np.nan
+
     ex_timesteps = example_data["timesteps"]
+    print(np.shape(ex_timesteps))
     ex_wl = example_data["wavelengths"]
     mask = example_data["mask"]
-    reference = flow_estimates[0]["reference"]
+    #reference = flow_estimates[0]["reference"]
+    print(np.shape(reference))
     WL_IDX = 0
     axes = subfig_images.subplots(1, 6)
 
@@ -189,38 +275,53 @@ def create_flow_figure(models):
         im = ax.imshow(img[time]/100, vmin=0, vmax=20, cmap="magma")
         ax.contour(mask, colors="red")
         ax.axis("off")
-        ax.set_title(f"t={ex_timesteps[time]/60:.0f} min", y=-0.15, fontweight="bold")
-        ax.text(2, 38, f"pO2 ref.: {reference[int(time*156.76)]*100:.0f}%", color="white")
+        ax.set_title(f"t={np.mean(timesteps[time]):.0f} min", y=-0.15, fontweight="bold")
+        ax.text(2, 38, f"sO2 ref.: {np.mean(reference[time])*100:.0f}%", color="white")
         if cbar:
             cb = plt.colorbar(mappable=im, ax=ax)
             cb.set_label(f"PAI @{ex_wl[WL_IDX]:.0f}nm [a.u.]", fontweight="bold")
         if scalebar:
             ax.add_artist(ScaleBar(0.075, "mm"))
 
-    def add_sO2(ax, img, time, cbar=False, scalebar=False):
+    def add_sO2(ax, img, time, cbar=False, scalebar=False, method="LU", title=False):
         im = ax.imshow(img[time], vmin=0, vmax=100, cmap="viridis")
         ax.contour(mask, colors="red")
         ax.axis("off")
-        ax.set_title(f"t={ex_timesteps[time]/60:.0f} min", y=-0.15, fontweight="bold")
-        ax.text(2, 38, f"LU est.: {np.mean(img[time][mask==0]):.0f}%", color="black")
+        if title:
+            ax.set_title(f"t={np.mean(timesteps[time]):.0f} min", y=-0.15, fontweight="bold")
+        ax.text(2, 38, f"{method} est.: {np.mean(img[time][mask==0]):.0f}%", color="black")
         if cbar:
             cb = plt.colorbar(mappable=im, ax=ax)
-            cb.set_label(f"LU sO$_2$ estimate [%]", fontweight="bold")
+            cb.set_label(f"{method} sO$_2$ [%]", fontweight="bold")
         if scalebar:
             ax.add_artist(ScaleBar(0.075, "mm"))
 
     add_img(axes[0], ex_signal[:, WL_IDX, :, :, 0], 0, scalebar=True)
-    add_img(axes[1], ex_signal[:, WL_IDX, :, :, 0], 160)
-    add_img(axes[2], ex_signal[:, WL_IDX, :, :, 0], 250, cbar=True)
+    add_img(axes[1], ex_signal[:, WL_IDX, :, :, 0], 80)
+    add_img(axes[2], ex_signal[:, WL_IDX, :, :, 0], 160, cbar=True)
 
     add_sO2(axes[3], ex_sO2[:, 0, :, :, 0], 0, scalebar=True)
-    add_sO2(axes[4], ex_sO2[:, 0, :, :, 0], 160)
-    add_sO2(axes[5], ex_sO2[:, 0, :, :, 0], 250, cbar=True)
+    add_sO2(axes[4], ex_sO2[:, 0, :, :, 0], 80)
+    add_sO2(axes[5], ex_sO2[:, 0, :, :, 0], 160, cbar=True)
 
     axes[0].text(0, 8, "A", size=30, weight='bold', color="white")
-    axes[3].text(0, 8, "B", size=30, weight='bold')
+    axes[3].text(0, 8, "C", size=30, weight='bold')
 
-    plt.savefig("figure5.png", dpi=300)
+    lsd_images = fig.add_subfigure(gs[1, 1])
+    axes = lsd_images.subplots(1, 3)
+    add_sO2(axes[0], lsd_result[:, 0, :, :, 0], 0, scalebar=True, method="LSD")
+    add_sO2(axes[1], lsd_result[:, 0, :, :, 0], 80, method="LSD")
+    add_sO2(axes[2], lsd_result[:, 0, :, :, 0], 160, cbar=True, method="LSD")
+    axes[0].text(0, 8, "D", size=30, weight='bold')
+
+    lstm_images = fig.add_subfigure(gs[2, 1])
+    axes = lstm_images.subplots(1, 3)
+    add_sO2(axes[0], lstm_result[:, 0, :, :, 0], 0, scalebar=True, method="LSTM", title=True)
+    add_sO2(axes[1], lstm_result[:, 0, :, :, 0], 80, method="LSTM", title=True)
+    add_sO2(axes[2], lstm_result[:, 0, :, :, 0], 160, cbar=True, method="LSTM", title=True)
+    axes[0].text(0, 8, "E", size=30, weight='bold')
+
+    plt.savefig("figure5.pdf", dpi=300)
 
 
 if __name__ == "__main__":
