@@ -8,6 +8,7 @@ from utils.distribution_distance import compute_jsd
 import matplotlib.gridspec as gridspec
 from matplotlib_scalebar.scalebar import ScaleBar
 from scipy.ndimage import distance_transform_edt
+from matplotlib.patches import Rectangle
 
 RECOMPUTE = False
 MASK_LABELS = {
@@ -149,7 +150,7 @@ example_dataset_path = PATH + f"/{EX_DATA}/"
 data = np.load(example_dataset_path + EX_DATA + ".npz")
 ex_lu = data["lu"]
 ex_spectra = data["spectra"]
-ex_mask = data["reference_mask"]
+ex_mask = np.squeeze(data["reference_mask"])
 
 
 def load_dl_result(path):
@@ -163,7 +164,7 @@ WL_IDX = 5
 
 fig = plt.figure(layout="constrained", figsize=(12, 6))
 gs = gridspec.GridSpec(ncols=1, nrows=2, figure=fig,
-                       height_ratios=[1.04, 1])
+                       height_ratios=[1, 1])
 subfig_1 = fig.add_subfigure(gs[0, 0])
 subfig_2 = fig.add_subfigure(gs[1, 0])
 
@@ -172,60 +173,87 @@ subfig_2 = fig.add_subfigure(gs[1, 0])
 
 
 def show_img(ax, img, slice_idx, title=False):
-    if title:
-        ax.set_title(f"PAI @{ex_wl[WL_IDX]:.0f}nm [a.u.]")
+    ax.text(50, 20, f"PAI @{ex_wl[WL_IDX]:.0f}nm", color="white", fontweight="bold")
     im = ax.imshow(img[slice_idx]/100, cmap="magma", vmin=0, vmax=6)
-    plt.colorbar(mappable=im, ax=ax, location="left")
+    #plt.colorbar(mappable=im, ax=ax, location="left")
     for idx in [2, 3, 4, 5, 6]:
         ax.plot([], [], color=COLOURS[idx-1], label=MASK_LABELS[idx])
         ax.contour(ex_mask[slice_idx]==idx, colors=COLOURS[idx-1])
     ax.axis("off")
-    ax.legend(ncol=1, loc="lower left", labelspacing=0, fontsize=9,
+    ax.legend(ncol=1, loc="lower right", labelspacing=0, fontsize=9,
               borderpad=0.1, handlelength=1, handletextpad=0.4,
               labelcolor="white", framealpha=0)
-    ax.add_artist(ScaleBar(0.075, "mm", location="lower right"))
+    ax.add_artist(ScaleBar(0.075, "mm", location="lower left"))
 
 
-def show_oxy(ax, img, method, slice_idx, cbar=False, title=False):
-    if title:
-        ax.set_title(f"{method} [%]")
+def show_oxy(ax, img, method, slice_idx, title=False):
+    ax.text(50, 20, f"{method}", color="white", fontweight="bold")
     ax.imshow(ex_spectra[slice_idx, WL_IDX] / 100, cmap="magma", vmin=0, vmax=6)
     # dist_mask = distance_transform_edt(ex_mask[slice_idx] > 1)
-    img[slice_idx][ex_spectra[slice_idx, WL_IDX] < 0] = np.nan
+    img[slice_idx][ex_spectra[slice_idx, WL_IDX] < 70] = np.nan
     # print(np.nanmean(img[slice_idx][ex_mask[slice_idx]==3]))
     im = ax.imshow(img[slice_idx] * 100, cmap="viridis", vmin=0, vmax=100)
-    if cbar:
-        plt.colorbar(mappable=im, ax=ax, location="left")
-    for idx in [2, 3, 4, 5, 6]:
-        ax.contour(ex_mask[slice_idx] == idx, colors=COLOURS[idx - 1])
+    ax.contour((ex_mask[slice_idx] > 1), colors=COLOURS[1])
+    for idx in [3, 4, 5]:
+        dist_mask = distance_transform_edt(ex_mask[slice_idx] > 1)
+        ax.contour(((ex_mask[slice_idx] == idx) & (dist_mask < 40)), colors=COLOURS[idx - 1])
+    for idx in [6]:
+        ax.contour((ex_mask[slice_idx] == idx), colors=COLOURS[idx - 1])
     ax.axis("off")
-    ax.add_artist(ScaleBar(0.075, "mm", location="lower right"))
+    ax.add_artist(ScaleBar(0.075, "mm", location="lower left"))
+
+    data = np.squeeze(img[slice_idx]) * 100
+    ydim, xdim = np.shape(data)
+
+    WIDTH = xdim / 3
+    BASELINE = ydim - 25
+    LEFTSHIFT = 15
+    HEIGHT = ydim / 10
+    OUTLINE_COLOR = "black"
+
+    mean_kidney_sO2 = (np.nanmean(data[ex_mask[slice_idx] == 5]) / 100)
+    mean_arterial_sO2 = (np.nanmean(data[ex_mask[slice_idx] == 6]) / 100)
+    ax.plot([xdim - LEFTSHIFT - WIDTH + mean_kidney_sO2 * WIDTH,
+             xdim - LEFTSHIFT - WIDTH + mean_kidney_sO2 * WIDTH],
+            [BASELINE - 1, BASELINE - HEIGHT], c="orange", linewidth=1.5)
+    ax.plot([xdim - LEFTSHIFT - WIDTH + mean_arterial_sO2 * WIDTH,
+             xdim - LEFTSHIFT - WIDTH + mean_arterial_sO2 * WIDTH],
+            [BASELINE - 1, BASELINE - HEIGHT], c="red", linewidth=1.5)
+
+    hist, bins = np.histogram(data, bins=50, range=(0, 100))
+    ax.plot([xdim - WIDTH - LEFTSHIFT, xdim - LEFTSHIFT],
+            [BASELINE, BASELINE], c=OUTLINE_COLOR, linewidth=1)
+    ax.stairs(BASELINE - (hist / np.max(hist) * HEIGHT),
+              (xdim - LEFTSHIFT - WIDTH + bins / 100 * WIDTH),
+              baseline=BASELINE, fill=True, color="lightgray")
+    ax.stairs(BASELINE - (hist / np.max(hist) * HEIGHT),
+              (xdim - LEFTSHIFT - WIDTH + bins / 100 * WIDTH),
+              baseline=BASELINE, fill=False, color=OUTLINE_COLOR, linewidth=1)
+    x_points = np.asarray(xdim - LEFTSHIFT - WIDTH + bins / 100 * WIDTH)
+
+    for i in np.arange(0, 20, 2):
+        ax.scatter(x_points, np.ones_like(x_points) * BASELINE + 2 + i,
+                   c=((x_points - np.min(x_points)) / (np.max(x_points) - np.min(x_points))),
+                   s=2, marker="s", cmap="viridis")
+
+    ax.add_artist(Rectangle((xdim - LEFTSHIFT - WIDTH - 2, BASELINE), WIDTH + 4, 22, fill=False, edgecolor="black"))
+
+    ax.text(xdim - LEFTSHIFT - WIDTH, BASELINE + 16, "0", color="white", fontsize=9)
+    ax.text(xdim - LEFTSHIFT - WIDTH / 2 - 20, BASELINE + 16, "sO$_2$", color="white", fontsize=9)
+    ax.text(xdim - LEFTSHIFT - 28, BASELINE + 16, "100", color="white", fontsize=9)
 
 
-ex_lu[ex_mask<2] = np.nan
-ex_BASE[ex_mask<2] = np.nan
-ex_WATER_4cm[ex_mask<2] = np.nan
-
-#
-# def apply_threshold_for_mask(mask, threshold):
-#     ex_lu[3:6][(ex_spectra[3:6, 5] < threshold) & (ex_mask[3:6]==mask)] = np.nan
-#     ex_BASE[3:6][(ex_spectra[3:6, 5] < threshold) & (ex_mask[3:6]==mask)] = np.nan
-#     ex_WATER_4cm[3:6][(ex_spectra[3:6, 5] < threshold) & (ex_mask[3:6]==mask)] = np.nan
-#
-#
-# apply_threshold_for_mask(6, 100)
-# apply_threshold_for_mask(5, 200)
-# apply_threshold_for_mask(4, 300)
-# apply_threshold_for_mask(3, 200)
-# apply_threshold_for_mask(2, 200)
+ex_lu[ex_mask < 2] = np.nan
+ex_BASE[ex_mask < 2] = np.nan
+ex_WATER_4cm[ex_mask < 2] = np.nan
 
 show_img(ax1, ex_spectra[:, WL_IDX, :, :], 0, title=True)
-show_oxy(ax2, ex_lu, "Linear Unmixing", 0, cbar=True, title=True)
+show_oxy(ax2, ex_lu, "Linear Unmixing", 0, title=True)
 show_oxy(ax3, ex_BASE, "BASE", 0, title=True)
 show_oxy(ax4, ex_WATER_4cm, "WATER_4cm", 0, title=True)
 
 show_img(ax5, ex_spectra[:, WL_IDX, :, :], 5)
-show_oxy(ax6, ex_lu, "Linear Unmixing", 5, cbar=True)
+show_oxy(ax6, ex_lu, "Linear Unmixing", 5)
 show_oxy(ax7, ex_BASE, "BASE", 5)
 show_oxy(ax8, ex_WATER_4cm, "WATER_4cm", 5)
 
@@ -239,4 +267,4 @@ ax6.text(5, 45, "F", size=30, weight='bold', color="white")
 ax7.text(5, 45, "G", size=30, weight='bold', color="white")
 ax8.text(5, 45, "H", size=30, weight='bold', color="white")
 
-plt.savefig("figure7.png", dpi=300)
+plt.savefig("figure7.pdf", dpi=300)
