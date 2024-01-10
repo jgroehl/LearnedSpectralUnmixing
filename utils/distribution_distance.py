@@ -46,7 +46,3 @@ def compute_jsd(a, b):
 
     jsd = jsd / len(a)
     return jsd
-
-
-def compute_mmd(a, b):
-    validate_input(a, b)

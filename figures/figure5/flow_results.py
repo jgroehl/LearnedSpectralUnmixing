@@ -6,6 +6,7 @@ from utils.constants import ALL_MODELS
 from paths import TRAINING_DATA_PATH, TEST_DATA_PATH
 from utils.distribution_distance import compute_jsd
 import matplotlib.gridspec as gridspec
+from matplotlib_scalebar.scalebar import ScaleBar
 
 RECOMPUTE = False
 
@@ -120,14 +121,17 @@ def load_data(path, models):
 
 def create_flow_figure(models):
 
+    example_data = np.load(fr"{TEST_DATA_PATH}\flow/flow_1/examples.npz")
+
     flow_data_path = fr"{TEST_DATA_PATH}\flow/"
 
     models_flow, flow_estimates, best_flow, worst_flow = load_data(flow_data_path, models)
 
     fig = plt.figure(layout="constrained", figsize=(12, 5.5))
-    gs = gridspec.GridSpec(ncols=2, nrows=1, figure=fig)
+    gs = gridspec.GridSpec(ncols=2, nrows=2, figure=fig, height_ratios=[1.17, 2])
 
-    subfigs = [fig.add_subfigure(gs[0, 0]), fig.add_subfigure(gs[0, 1])]
+    subfigs = [fig.add_subfigure(gs[1, 0]), fig.add_subfigure(gs[1, 1])]
+    legend = True
 
     for subfig, models, estimates, best, worst in zip(subfigs, models_flow, flow_estimates, best_flow, worst_flow):
 
@@ -140,33 +144,83 @@ def create_flow_figure(models):
         timesteps = timesteps.reshape((n_ts, -1))
         reference = estimates["reference"].reshape((n_ts, -1))
 
-        def add_line(val, color, label):
+        def add_line(val, color, label, linestyle="solid"):
             val = val.copy()
             val = val - reference
             val = val.astype(float)
             mean = np.mean(val, axis=1) * 100
             std = np.std(val, axis=1) * 100
-            ax.plot(np.mean(reference, axis=1)*100, mean, color=color, label=label)
-            ax.fill_between(np.mean(reference, axis=1)*100, mean-std, mean+std, color=color, alpha=0.3)
+            ax.plot(np.mean(reference, axis=1)*100, mean, color=color, label=label, linestyle=linestyle)
+            ax.fill_between(np.mean(reference, axis=1)*100, mean-std, mean+std, color=color, alpha=0.1)
+            ax.invert_xaxis()
 
-        add_line(reference, "green", "pO2 reference")
+        add_line(reference, "black", "pO$_2$ reference", linestyle="dashed")
 
-        for model in models:
-            index = np.argwhere(np.asarray(ALL_MODELS + ["LU"]) == model).item()
-            add_line(estimates[model].reshape((n_ts, -1)), COLOURS[index], model)
+        add_line(estimates["LU"].reshape((n_ts, -1)), "black", "Linear Unmixing")
+        add_line(estimates["SMALL"].reshape((n_ts, -1)), "purple", "SMALL")
+        add_line(estimates["ILLUM_POINT"].reshape((n_ts, -1)), "red", "ILLUM_POINT")
+        add_line(estimates["WATER_4cm"].reshape((n_ts, -1)), "#03A9F4", "WATER_4cm")
 
-        ax.set_xlabel("Reference Oxygenation [%]", fontweight="bold", fontsize=12)
-        ax.set_ylabel("Difference in oxygenation [%]", fontweight="bold", fontsize=12)
+        ax.set_xlabel("pO$_2$ reference [%]", fontweight="bold", fontsize=12)
+        ax.set_ylabel("(estimate - pO$_2$ ref.) [%]", fontweight="bold", fontsize=12)
+
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        ax.set_ylim(-45, 45)
+        ax.set_ylim(-30, 35)
+        if legend:
+            ax.legend(loc="upper left", labelspacing=0, framealpha=0)
+        legend = not legend
 
-        ax.legend()
+    subfigs[0].text(0.01, 0.92, "C", size=30, weight='bold')
+    subfigs[1].text(0.01, 0.92, "D", size=30, weight='bold')
 
-    subfigs[0].text(0, 0.90, "A", size=30, weight='bold')
-    subfigs[1].text(0, 0.90, "B", size=30, weight='bold')
+    subfig_images = fig.add_subfigure(gs[0, 0:2])
+    ex_signal = example_data["recon"]
+    ex_sO2 = example_data["sO2"] * 100
+    ex_sO2[0, :, 0:10, 0:10, :] = np.nan
+    ex_timesteps = example_data["timesteps"]
+    ex_wl = example_data["wavelengths"]
+    mask = example_data["mask"]
+    reference = flow_estimates[0]["reference"]
+    WL_IDX = 0
+    axes = subfig_images.subplots(1, 6)
 
-    plt.savefig("figure4.png", dpi=300)
+    def add_img(ax, img, time, cbar=False, scalebar=False):
+        im = ax.imshow(img[time]/100, vmin=0, vmax=20, cmap="magma")
+        ax.contour(mask, colors="red")
+        ax.axis("off")
+        ax.set_title(f"t={ex_timesteps[time]/60:.0f} min", y=-0.15, fontweight="bold")
+        ax.text(2, 38, f"pO2 ref.: {reference[int(time*156.76)]*100:.0f}%", color="white")
+        if cbar:
+            cb = plt.colorbar(mappable=im, ax=ax)
+            cb.set_label(f"PAI @{ex_wl[WL_IDX]:.0f}nm [a.u.]", fontweight="bold")
+        if scalebar:
+            ax.add_artist(ScaleBar(0.075, "mm"))
+
+    def add_sO2(ax, img, time, cbar=False, scalebar=False):
+        im = ax.imshow(img[time], vmin=0, vmax=100, cmap="viridis")
+        ax.contour(mask, colors="red")
+        ax.axis("off")
+        ax.set_title(f"t={ex_timesteps[time]/60:.0f} min", y=-0.15, fontweight="bold")
+        ax.text(2, 38, f"LU est.: {np.mean(img[time][mask==0]):.0f}%", color="black")
+        if cbar:
+            cb = plt.colorbar(mappable=im, ax=ax)
+            cb.set_label(f"LU sO$_2$ estimate [%]", fontweight="bold")
+        if scalebar:
+            ax.add_artist(ScaleBar(0.075, "mm"))
+
+    add_img(axes[0], ex_signal[:, WL_IDX, :, :, 0], 0, scalebar=True)
+    add_img(axes[1], ex_signal[:, WL_IDX, :, :, 0], 160)
+    add_img(axes[2], ex_signal[:, WL_IDX, :, :, 0], 250, cbar=True)
+
+    add_sO2(axes[3], ex_sO2[:, 0, :, :, 0], 0, scalebar=True)
+    add_sO2(axes[4], ex_sO2[:, 0, :, :, 0], 160)
+    add_sO2(axes[5], ex_sO2[:, 0, :, :, 0], 250, cbar=True)
+
+    axes[0].text(0, 8, "A", size=30, weight='bold', color="white")
+    axes[3].text(0, 8, "B", size=30, weight='bold')
+
+    plt.savefig("figure5.png", dpi=300)
 
 
 if __name__ == "__main__":

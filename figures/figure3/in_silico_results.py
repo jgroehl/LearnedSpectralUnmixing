@@ -16,8 +16,7 @@ ALL_MODELS = ['ALL', 'BASE',
                'SMALL',
               'ACOUS',
               'MSOT', 'MSOT_SKIN','MSOT_ACOUS','MSOT_ACOUS_SKIN',
-              'INVIS','INVIS_SKIN', 'INVIS_ACOUS', 'INVIS_SKIN_ACOUS',
-
+              'INVIS','INVIS_SKIN', 'INVIS_ACOUS', 'INVIS_SKIN_ACOUS'
               ]
 
 ALL_LABELS= ['ALL', 'BASE',
@@ -29,14 +28,35 @@ ALL_LABELS= ['ALL', 'BASE',
               'DISK', 'POINT',
               'SMALL',
               'ACOUS',
-              r'$\bf{MSOT}$', 'SKIN', 'ACOUS', 'AC/SK',
-              r'$\bf{INVIS}$', 'SKIN', 'ACOUS', 'AC/SK'
+              'MSOT', 'SKIN', 'ACOUS', 'AC/SK',
+              'INVIS', 'SKIN', 'ACOUS', 'AC/SK'
               ]
 
 
 with open(f"{TEST_DATA_PATH}/result_matrix.json", "r+") as json_file:
     result_matrix_dict = json.load(json_file)
 
+diagonal_results = []
+for ds in ALL_MODELS:
+    diagonal_results.append(result_matrix_dict[ds][ds])
+
+print("Spread of errors when testing on training set")
+print(np.min(diagonal_results), np.mean(diagonal_results), np.max(diagonal_results))
+
+print("Average error increase when testing on SKIN data, training on BASE")
+mean_baseline_error = []
+for ds in ALL_MODELS:
+    if not "SKIN" in ds:
+        mean_baseline_error.append(result_matrix_dict[ds]["BASE"])
+mean_baseline_error = np.mean(mean_baseline_error)
+
+skin_error_increase = []
+for ds in ALL_MODELS:
+    if "SKIN" in ds:
+        skin_error_increase.append(result_matrix_dict[ds]["BASE"] - mean_baseline_error)
+
+print(np.mean(skin_error_increase))
+exit()
 indices = np.arange(len(ALL_MODELS)).astype(int)
 
 all_results_heatmap = np.zeros((len(ALL_MODELS), len(ALL_MODELS)))
@@ -150,5 +170,5 @@ ax0.set_xlabel("Number of wavelengths", fontweight="bold", fontsize=14)
 ax0.set_ylim(7, 15)
 ax0.set_xlim(14.5, 25.5)
 
-plt.savefig(f"figure3.png", dpi=500)
+plt.savefig(f"figure3.pdf", dpi=400)
 plt.close()

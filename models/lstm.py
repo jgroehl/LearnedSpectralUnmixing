@@ -30,7 +30,8 @@ class LSTMParams:
 
     learning_rate_scheduler = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_median_error_fraction', factor=0.5,
                                                                    patience=5, min_lr=1e-7, verbose=1)
-    early_stopping_criterion = tf.keras.callbacks.EarlyStopping(monitor='val_median_error_fraction', patience=7, verbose=1)
+    early_stopping_criterion = tf.keras.callbacks.EarlyStopping(monitor='val_median_error_fraction',
+                                                                patience=7, verbose=1)
     additional_metrics = [tf.keras.metrics.MeanAbsolutePercentageError()]
     loss_function = tf.keras.losses.MeanAbsoluteError()
     number_of_epochs = 100
@@ -68,3 +69,20 @@ class LSTMParams:
         ret_model = get_model()
         ret_model.load_weights(model_name)
         return ret_model
+
+
+if __name__ == "__main__":
+
+    import keras.utils
+
+    keras.utils.plot_model(
+        get_model(),
+        to_file="model.png",
+        show_shapes=True,
+        show_dtype=False,
+        show_layer_names=False,
+        rankdir="LR",
+        expand_nested=True,
+        dpi=300,
+        show_layer_activations=True
+    )

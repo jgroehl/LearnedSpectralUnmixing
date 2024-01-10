@@ -87,9 +87,10 @@ dat_2 = subplots_2.scatter(
     s=2,
     alpha=1,
     vmin=0, vmax=100)
+dat_2.set_rasterized(True)
 cbar2 = plt.colorbar(dat_2, orientation="horizontal")
-subfigure_2.text(0.1, 0.92, "Mapping sO$_2$ onto UMAP projection [%]", size=14, weight='bold')
-# cbar2.set_label("Oxygenation [%]", fontweight="bold", fontsize=12)
+cbar2.set_label("Blood oxygenation sO$_2$ [%]", labelpad=-30, color="white")
+subfigure_2.text(0.1, 0.92, "Mapping sO$_2$ onto UMAP projection", size=14, weight='bold')
 subplots_2.set_ylim(-9, 10)
 subplots_2.set_xlim(-10, 17)
 subplots_2.axis("off")
@@ -104,18 +105,20 @@ subfigure_1.text(0, 0.90, "B", size=30, weight='bold')
 def plot_for_index(axis, index):
     axis.axis("off")
     axis.set_title(datasets[index], y=-0.1)
-    axis.scatter(
+    sc = axis.scatter(
         embedding[:, 0],
         embedding[:, 1],
         c="black",
         alpha=1,
         s=3)
-    axis.scatter(
+    sc.set_rasterized(True)
+    sc = axis.scatter(
         embedding[all_ds_idx[random_idx] == index, 0],
         embedding[all_ds_idx[random_idx] == index, 1],
         c=COLOURS[index],
         alpha=0.2,
         s=2)
+    sc.set_rasterized(True)
     axis.set_aspect('equal')
     axis.set_ylim(-9, 10)
     axis.set_xlim(-10, 18)
@@ -142,5 +145,5 @@ for ax, img, idx in zip(axes_3, example_images, indexes):
     ax.set_title(datasets[idx], y=-0.15)
     ax.set_anchor('S')
 
-plt.savefig("figure2.png")
+plt.savefig("figure2.pdf")
 plt.close()

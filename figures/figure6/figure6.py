@@ -6,9 +6,66 @@ from utils.constants import ALL_MODELS
 from paths import TRAINING_DATA_PATH, TEST_DATA_PATH
 from utils.distribution_distance import compute_jsd
 import matplotlib.gridspec as gridspec
+from matplotlib_scalebar.scalebar import ScaleBar
 
 RECOMPUTE = False
 VENOUS_MASK = 5
+
+#     mouse_distances = np.load(mouse_path + "/all_distances.npz", allow_pickle=True)
+#     mouse_distances = {key: mouse_distances[key] for key in mouse_distances}
+#     mouse_distance_means = np.asarray([np.mean(mouse_distances[model]) for model in ALL_MODELS])
+#     best_dist_mouse = np.argmin(mouse_distance_means)
+#     worst_dist_mouse = np.argmax(mouse_distance_means)
+#
+#     forearm_distances = np.load(forearm_path + "/all_distances.npz", allow_pickle=True)
+#     forearm_distances = {key: forearm_distances[key] for key in forearm_distances}
+#     forearm_distance_means = np.asarray([np.mean(forearm_distances[model]) for model in ALL_MODELS])
+#     best_dist_forearm = np.argmin(forearm_distance_means)
+#     worst_dist_forearm = np.argmax(forearm_distance_means)
+#
+#     CO2_distances = np.load(CO2_path + "/all_distances.npz", allow_pickle=True)
+#     CO2_distances = {key: CO2_distances[key] for key in CO2_distances}
+#     CO2_distance_means = np.asarray([np.mean(CO2_distances[model]) for model in ALL_MODELS])
+#     best_dist_CO2 = np.argmin(CO2_distance_means)
+#     worst_dist_CO2 = np.argmax(CO2_distance_means)
+
+# np.random.seed(1336)
+#     positions = np.random.uniform(0.9, 1.1, size=np.shape(mouse_distance_means))
+#     positions[best_dist_forearm] = 1
+#     positions[worst_dist_forearm] = 1
+#     positions[best_dist_mouse] = 1
+#
+#     a3.set_title("In vivo", style="italic")
+#     a3.set_ylabel("$D_{JS}$ [a.u.]", fontweight="bold")
+#
+#     a3.spines.right.set_visible(False)
+#     a3.spines.top.set_visible(False)
+#     a3.set_xlim(0.75, 2)
+#     a3.set_xticks([1, 1.33, 1.67], ["Mouse", "Arm", " CO$_2$"])
+#
+#     a3.scatter(positions, mouse_distance_means, c="gray", s=MARKERSIZE)
+#     a3.scatter(positions[worst_dist_mouse],
+#                mouse_distance_means[worst_dist_mouse], marker="*", c="red")
+#     a3.scatter(positions[base_idx],
+#                mouse_distance_means[base_idx], marker="s", c="blue")
+#     a3.scatter(positions[best_dist_mouse],
+#                mouse_distance_means[best_dist_mouse], marker="P", c="#03A9F4")
+#
+#     a3.scatter(positions + 0.33, forearm_distance_means, c="gray", s=MARKERSIZE)
+#     a3.scatter(positions[worst_dist_forearm] + 0.33,
+#                forearm_distance_means[worst_dist_forearm], marker="*", c="red")
+#     a3.scatter(positions[base_idx] + 0.33,
+#                forearm_distance_means[base_idx], marker="s", c="blue")
+#     a3.scatter(positions[best_dist_forearm] + 0.33,
+#                forearm_distance_means[best_dist_forearm], marker="D", c="orange")
+#
+#     a3.scatter(positions + 0.67, CO2_distance_means, c="gray", s=MARKERSIZE)
+#     a3.scatter(positions[worst_dist_CO2] + 0.67,
+#                CO2_distance_means[worst_dist_CO2], marker="*", c="red")
+#     a3.scatter(positions[base_idx] + 0.67,
+#                CO2_distance_means[base_idx], marker="s", c="blue")
+#     a3.scatter(positions[best_dist_CO2] + 0.67,
+#                CO2_distance_means[best_dist_CO2], marker="P", c="#03A9F4")
 
 
 def compile_distance_measures(data_path):
@@ -165,13 +222,14 @@ def create_forearm_figure(models):
     models_mouse, means_mouse, means_mouse_kidney, best_mouse, worst_mouse = load_data(mouse_data_path,
                                                                                        models, mouse=True)
 
-    fig = plt.figure(layout="constrained", figsize=(9, 9))
+    fig = plt.figure(layout="constrained", figsize=(9, 8.5))
     gs = gridspec.GridSpec(ncols=3, nrows=4, figure=fig,
-                           height_ratios=[1.1, 1, 1.5, 1.5],
-                           width_ratios=[1.2, 1, 1])
+                           height_ratios=[0.9, 0.9, 1.5, 1.5],
+                           width_ratios=[1.2, 1, 1],
+                           hspace=0, wspace=0)
 
     subfig_1 = fig.add_subfigure(gs[0, 0])
-    subfig_1.text(0, 0.87, "A", size=20, weight='bold')
+    subfig_1.text(0, 0.86, "A", size=22.5, weight='bold')
     ax1 = subfig_1.subplots(1, 1)
     model_names_forearm = np.copy(models_forearm)
     model_names_mouse = np.copy(models_mouse)
@@ -184,8 +242,8 @@ def create_forearm_figure(models):
                 boxprops=dict(facecolor="red", color="red", alpha=0.5),
                 medianprops=dict(linewidth=1, color='black'))
     models_forearm[0] = "LU"
-    models_forearm[-1] = "Worst\nJSD"
-    models_forearm[-2] = "Best\nJSD"
+    models_forearm[-1] = "Worst\n$D_{JS}$"
+    models_forearm[-2] = "Best\n$D_{JS}$"
     ax1.set_xticks(np.arange(len(models_forearm)) + 1, models_forearm, fontsize=8)
     ax1.spines.right.set_visible(False)
     ax1.spines.top.set_visible(False)
@@ -201,8 +259,14 @@ def create_forearm_figure(models):
         if mouse:
             ax.contour(mask == VENOUS_MASK, colors="blue")
             ax.contour(mask == 6, colors="red")
+            ax.add_artist(ScaleBar(0.075, "mm", location="lower left", fixed_value=2,
+                                   fixed_units="mm"))
+
         else:
             ax.contour(mask == 1, colors=color)
+            ax.add_artist(ScaleBar(0.075, "mm", location="lower left", fixed_value=5,
+                                   fixed_units="mm"))
+
         ydim, xdim = np.shape(image)
         hist, bins = np.histogram(data, bins=50, range=(0, 100))
         ax.plot([xdim, xdim], [0, ydim-2], c="black", linewidth=1)
@@ -222,15 +286,15 @@ def create_forearm_figure(models):
         ax.axis("off")
 
     subfig_1 = fig.add_subfigure(gs[0, 1])
-    subfig_1.text(0, 0.88, "B", size=20, weight='bold')
+    subfig_1.text(0, 0.86, "B", size=22.5, weight='bold')
     subfig_2 = fig.add_subfigure(gs[0, 2])
-    subfig_2.text(0, 0.87, "C", size=20, weight='bold')
+    subfig_2.text(0, 0.86, "C", size=22.5, weight='bold')
     subfig_3 = fig.add_subfigure(gs[1, 1])
-    subfig_3.text(0, 0.92, "E", size=20, weight='bold')
+    subfig_3.text(0, 0.88, "E", size=22.5, weight='bold')
     subfig_4 = fig.add_subfigure(gs[1, 2])
-    subfig_4.text(0, 0.92, "F", size=20, weight='bold')
+    subfig_4.text(0, 0.88, "F", size=22.5, weight='bold')
     subfig_5 = fig.add_subfigure(gs[1, 0])
-    subfig_5.text(0, 0.95, "D", size=20, weight='bold')
+    subfig_5.text(0, 0.88, "D", size=22.5, weight='bold')
     ax1 = subfig_1.subplots(1, 1)
     ax2 = subfig_2.subplots(1, 1)
     ax3 = subfig_3.subplots(1, 1)
@@ -249,9 +313,17 @@ def create_forearm_figure(models):
     model_1 = model_1[LOWER:UPPER, :]
     model_2 = model_2[LOWER:UPPER, :]
     mask = mask[LOWER:UPPER, :]
-    ax1.imshow(image, cmap="magma", vmin=-1000, vmax=5000)
-    ax1.set_title("PA Image [a.u.]")
+    im = ax1.imshow(image/100, cmap="magma", vmin=-10, vmax=50)
+    ax1.set_title("PAI @800nm [a.u.]")
+    cb = plt.colorbar(mappable=im, ax=ax1, location="right", pad=0)
+    # cb.set_label("PAI @800nm [a.u.]", fontweight="bold")
     ax1.axis("off")
+    ax1.add_artist(ScaleBar(0.075, "mm", location="lower left"))
+    ax1.contour(mask == 1, colors="red")
+    ax1.plot([], [], c="red", label="ARTERY")
+    ax1.legend(loc="lower right", labelspacing=0, fontsize=9,
+              borderpad=0.1, handlelength=1, handletextpad=0.4,
+              labelcolor="white", framealpha=0)
     add_image(ax2, ax2.imshow(lu, vmin=0, vmax=100), lu, mask, "Linear Unmixing")
     add_image(ax3, ax3.imshow(best, vmin=0, vmax=100), best, mask, f"Best: {model_names_forearm[-2]}")
     add_image(ax4, ax4.imshow(worst, vmin=0, vmax=100), worst, mask, f"Worst: {model_names_forearm[-1]}")
@@ -260,7 +332,7 @@ def create_forearm_figure(models):
     # add_image(ax6, ax6.imshow(model_2, vmin=0, vmax=100), model_2, mask, "ALL")
 
     subfig_7 = fig.add_subfigure(gs[2, 0])
-    subfig_7.text(0, 0.9, "G", size=20, weight='bold')
+    subfig_7.text(0, 0.92, "G", size=22.5, weight='bold')
     ax7 = subfig_7.subplots(1, 1)
 
     ax7.set_title("Mouse scans (N=7)")
@@ -278,8 +350,8 @@ def create_forearm_figure(models):
                        boxprops=dict(facecolor="blue", color="blue", alpha=0.5),
                        medianprops=dict(linewidth=1, color='black'))
     models_mouse[0] = "LU"
-    models_mouse[-1] = "Worst\nJSD"
-    models_mouse[-2] = "Best\nJSD"
+    models_mouse[-1] = "Worst\n$D_{JS}$"
+    models_mouse[-2] = "Best\n$D_{JS}$"
     ax7.set_xticks(np.arange(len(models_mouse)) + 1, models_mouse, fontsize=8)
     ax7.spines.right.set_visible(False)
     ax7.spines.top.set_visible(False)
@@ -290,15 +362,15 @@ def create_forearm_figure(models):
                                                                   "BASE", "ALL")
 
     subfig_7 = fig.add_subfigure(gs[2, 1])
-    subfig_7.text(0., 0.93, "H", size=20, weight='bold')
+    subfig_7.text(0., 0.92, "H", size=22.5, weight='bold')
     subfig_8 = fig.add_subfigure(gs[2, 2])
-    subfig_8.text(0, 0.93, "I", size=20, weight='bold')
+    subfig_8.text(0, 0.92, "I", size=22.5, weight='bold')
     subfig_9 = fig.add_subfigure(gs[3, 1])
-    subfig_9.text(0, 0.93, "K", size=20, weight='bold')
+    subfig_9.text(0, 0.92, "K", size=22.5, weight='bold')
     subfig_10 = fig.add_subfigure(gs[3, 2])
-    subfig_10.text(0, 0.93, "L", size=20, weight='bold')
+    subfig_10.text(0, 0.92, "L", size=22.5, weight='bold')
     subfig_11 = fig.add_subfigure(gs[3, 0])
-    subfig_11.text(0.01, 0.93, "J", size=20, weight='bold')
+    subfig_11.text(0.01, 0.92, "J", size=22.5, weight='bold')
     ax7 = subfig_7.subplots(1, 1)
     ax8 = subfig_8.subplots(1, 1)
     ax9 = subfig_9.subplots(1, 1)
@@ -313,13 +385,22 @@ def create_forearm_figure(models):
     best[mask < 2] = np.nan
     worst[mask < 2] = np.nan
     model_1[mask < 2] = np.nan
-    ax7.imshow(image, cmap="magma", vmin=50, vmax=450)
+    im = ax7.imshow(image/10, cmap="magma", vmin=5, vmax=45)
+    ax7.set_title("PAI @800nm [a.u.]")
+    ax7.axis("off")
+    ax7.add_artist(ScaleBar(0.075, "mm", location="lower left"))
+    ax7.contour(mask == 6, colors="red")
+    ax7.contour(mask == 5, colors="blue")
+    ax7.plot([], [], c="red", label="ARTERY")
+    ax7.plot([], [], c="blue", label="SPINE")
+    ax7.legend(loc="lower right", labelspacing=0, fontsize=9,
+               borderpad=0.1, handlelength=1, handletextpad=0.4,
+               labelcolor="white", framealpha=0)
+    cb = plt.colorbar(mappable=im, ax=ax7, location="right", pad=0)
     ax8.imshow(image, cmap="magma", vmin=50, vmax=450)
     ax9.imshow(image, cmap="magma", vmin=50, vmax=450)
     ax10.imshow(image, cmap="magma", vmin=50, vmax=450)
     ax11.imshow(image, cmap="magma", vmin=50, vmax=450)
-    ax7.set_title("PA Image [a.u.]")
-    ax7.axis("off")
     add_image(ax8, ax8.imshow(lu, vmin=0, vmax=100), lu, mask, "Linear Unmixing", mouse=True)
     add_image(ax9, ax9.imshow(best, vmin=0, vmax=100), best, mask, f"Best: {model_names_mouse[-2]}", mouse=True)
     add_image(ax10, ax10.imshow(worst, vmin=0, vmax=100), worst, mask, f"Worst: {model_names_mouse[-1]}", mouse=True)
@@ -328,7 +409,7 @@ def create_forearm_figure(models):
     # add_image(ax11, ax11.imshow(model_1, vmin=0, vmax=100), model_1, mask, "BASE", mouse=True)
     # add_image(ax12, ax12.imshow(model_2, vmin=0, vmax=100), model_2, mask, "ALL", mouse=True)
 
-    plt.savefig("figure6.png", dpi=300)
+    plt.savefig("figure6.svg", dpi=300)
 
 
 if __name__ == "__main__":
