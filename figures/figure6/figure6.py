@@ -199,7 +199,7 @@ def create_forearm_figure(models):
     positions[worst_dist_forearm] = 1
     positions[best_dist_mouse] = 1
 
-    ax3.set_title("$D_{JS}$ data analysis [a.u.]")
+    ax3.text(0.50, 1.12, "$D_{JS}$ data analysis [a.u.]")
     ax3.spines.left.set_visible(False)
     ax3.spines.right.set_visible(False)
     ax3.spines.top.set_visible(False)
@@ -213,7 +213,7 @@ def create_forearm_figure(models):
     ax3.legend(loc="lower right")
     ax3.tick_params(direction="in", labelsize=8)
 
-    ax9.set_title("$D_{JS}$ data analysis [a.u.]")
+    ax9.text(0.43, 1.16, "$D_{JS}$ data analysis [a.u.]")
     ax9.spines.right.set_visible(False)
     ax9.spines.left.set_visible(False)
     ax9.spines.top.set_visible(False)
@@ -229,23 +229,26 @@ def create_forearm_figure(models):
     ax9.legend(loc="lower right")
     ax9.tick_params(direction="in", labelsize=8)
 
-    ax1.text(0.5, 100, "C", size=22.5, weight='bold')
+    ax1.text(0.5, 97, "C", size=22.5, weight='bold')
     ax2.text(0, 50, "A", size=22.5, weight='bold', color="white")
-    ax3.text(0.465, 1.17, "B", size=22.5, weight='bold', color="black")
+    ax3.text(0.465, 1.07, "B", size=22.5, weight='bold', color="black")
     ax4.text(0, 50, "D", size=22.5, weight='bold', color="white")
     ax5.text(0, 50, "E", size=22.5, weight='bold', color="white")
     ax6.text(0, 50, "F", size=22.5, weight='bold', color="white")
     ax7.text(0.5, 99, "I", size=22.5, weight='bold')
     ax8.text(0, 40, "G", size=22.5, weight='bold', color="white")
-    ax9.text(0.38, 1.14, "H", size=22.5, weight='bold', color="black")
+    ax9.text(0.38, 1.13, "H", size=22.5, weight='bold', color="black")
     ax10.text(10, 40, "J", size=22.5, weight='bold', color="white")
     ax11.text(0, 40, "K", size=22.5, weight='bold', color="white")
     ax12.text(0, 40, "L", size=22.5, weight='bold', color="white")
 
+    ax1.set_ylim(40, 110)
+    ax7.set_ylim(50, 105)
+
     model_names_forearm = np.copy(models_forearm)
     model_names_mouse = np.copy(models_mouse)
 
-    ax1.set_title("sO$_2$ distribution (N=7)")
+    ax1.text(1, 103, "sO$_2$ distribution (N=7)")
     ax1.fill_between([0.5, len(models_forearm) + 0.5], 90, 100, color="red", alpha=0.25)
     ax1.hlines(95, xmin=0.5, xmax=len(models_forearm) + 0.5, color="red")
     ax1.boxplot(means_forearm,
@@ -262,7 +265,10 @@ def create_forearm_figure(models):
     ax1.set_ylabel("Est. sO$_2$ [%]", fontweight="bold", labelpad=-5)
 
     def add_image(ax, img, data, mask, title, color="red", mouse=False, colorbar=False):
-        ax.set_title(title)
+        if mouse:
+            ax.text(40, 24, title, color="white", fontweight="bold")
+        else:
+            ax.text(50, 30, title, color="white", fontweight="bold")
         if colorbar:
             cbar = plt.colorbar(img, location="left", pad=0)
             cbar.set_label("Est. sO$_2$ [%]", fontweight="bold", labelpad=-5)
@@ -344,7 +350,7 @@ def create_forearm_figure(models):
     model_2 = model_2[LOWER:UPPER, :]
     mask = mask[LOWER:UPPER, :]
     im = ax2.imshow(image/100, cmap="magma", vmin=-10, vmax=50)
-    ax2.set_title("Forearm PAI [a.u.]")
+    ax2.text(50, 30, "Forearm PAI [a.u.]", color="white", fontweight="bold")
     ax2.axis("off")
     ax2.add_artist(ScaleBar(0.075, "mm", location="lower left"))
     ax2.contour(mask == 1, colors="red")
@@ -353,11 +359,11 @@ def create_forearm_figure(models):
               borderpad=0.1, handlelength=1, handletextpad=0.4,
               labelcolor="white", framealpha=0)
     #add_image(ax3, ax3.imshow(lu, vmin=0, vmax=100), lu, mask, "Linear Unmixing")
-    add_image(ax4, ax4.imshow(best, vmin=0, vmax=100), best, mask, f"Best: {model_names_forearm[-2]}")
-    add_image(ax5, ax5.imshow(worst, vmin=0, vmax=100), worst, mask, f"Worst: {model_names_forearm[-1]}")
+    add_image(ax4, ax4.imshow(best, vmin=0, vmax=100), best, mask, f"{model_names_forearm[-2]}")
+    add_image(ax5, ax5.imshow(worst, vmin=0, vmax=100), worst, mask, f"{model_names_forearm[-1]}")
     add_image(ax6, ax6.imshow(model_1, vmin=0, vmax=100), model_1, mask, f"{model_names_forearm[-3]}")
 
-    ax7.set_title("sO$_2$ distribution (N=7)")
+    ax7.text(0.8, 102, "sO$_2$ distribution (N=7)")
     ax7.fill_between([0.3, len(models_mouse) + 0.7], 94, 98, color="red", alpha=0.25)
     ax7.hlines(96, xmin=0.3, xmax=len(models_mouse) + 0.7, color="red")
 
@@ -393,7 +399,7 @@ def create_forearm_figure(models):
     worst[mask < 2] = np.nan
     model_1[mask < 2] = np.nan
     im = ax8.imshow(image/10, cmap="magma", vmin=5, vmax=45)
-    ax8.set_title("Mouse PAI [a.u.]")
+    ax8.text(40, 24, "Mouse PAI [a.u.]", color="white", fontweight="bold")
     ax8.axis("off")
     ax8.add_artist(ScaleBar(0.075, "mm", location="lower left"))
     ax8.contour(mask == 6, colors="red")
@@ -409,8 +415,8 @@ def create_forearm_figure(models):
     ax11.imshow(image, cmap="magma", vmin=50, vmax=450)
     ax12.imshow(image, cmap="magma", vmin=50, vmax=450)
     #add_image(ax9, ax9.imshow(lu, vmin=0, vmax=100), lu, mask, "Linear Unmixing", mouse=True)
-    add_image(ax10, ax10.imshow(best, vmin=0, vmax=100), best, mask, f"Best: {model_names_mouse[-2]}", mouse=True)
-    add_image(ax11, ax11.imshow(worst, vmin=0, vmax=100), worst, mask, f"Worst: {model_names_mouse[-1]}", mouse=True)
+    add_image(ax10, ax10.imshow(best, vmin=0, vmax=100), best, mask, f"{model_names_mouse[-2]}", mouse=True)
+    add_image(ax11, ax11.imshow(worst, vmin=0, vmax=100), worst, mask, f"{model_names_mouse[-1]}", mouse=True)
     add_image(ax12, ax12.imshow(model_1, vmin=0, vmax=100), model_1, mask, f"{model_names_mouse[-3]}",
               mouse=True)
 

@@ -227,13 +227,16 @@ def create_flow_figure(models):
         val = val.astype(float)
         mean = np.mean(val, axis=1) * 100
         # np.mean(reference, axis=1)*100
-        ax.scatter(ts, mean, color=color, label=label, linestyle=linestyle, s=3)
+        ax.plot(ts, mean, color=color, label=label, linestyle=linestyle)
 
     add_line(reference, "black", "sO$_2$ reference (Severinghaus)", linestyle="dashed")
 
     mae_lstm = np.median(np.abs(estimates["SMALL"].reshape((n_ts, -1)) - reference)) * 100
+    mae_lu = np.median(np.abs(estimates["LU"].reshape((n_ts, -1)) - reference)) * 100
     mae_lsd = np.median(np.abs(lsd_timestep_results.reshape((n_ts, -1)) - reference)) * 100
 
+    add_scatter(estimates["LU"].reshape((n_ts, -1)), "blue",
+                fr"Linear Unmixing ($\epsilon$sO$_2$: {mae_lu:.1f}%)")
     add_scatter(lsd_timestep_results.reshape((n_ts, -1)), "orange",
                 fr"Learned Spectral Decolouring ($\epsilon$sO$_2$: {mae_lsd:.1f}%)")
     add_scatter(estimates["SMALL"].reshape((n_ts, -1)), "purple",
@@ -244,10 +247,8 @@ def create_flow_figure(models):
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    #ax.set_ylim(-20, 20)
     if legend:
-        ax.legend(loc="upper right", labelspacing=1, framealpha=0)
-    legend = not legend
+        ax.legend(loc="lower left", labelspacing=0.2, fontsize=10, framealpha=0)
 
     subfig.text(-0.005, 0.92, "B", size=30, weight='bold')
 
