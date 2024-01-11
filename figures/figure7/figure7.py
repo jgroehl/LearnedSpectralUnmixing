@@ -9,6 +9,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib_scalebar.scalebar import ScaleBar
 from scipy.ndimage import distance_transform_edt
 from matplotlib.patches import Rectangle
+from scipy.stats import mannwhitneyu
 
 RECOMPUTE = False
 MASK_LABELS = {
@@ -93,12 +94,12 @@ def compile_results(data_path):
                 # Except for the arota as it lies deeper
                 mask[data["reference_mask"] == 6] = 1
 
-            for i in range(6):
-                results[MASK_LABELS[mask_index]]["LU"][i].append(lu[i][mask[i]])
+            for time_point in range(6):
+                results[MASK_LABELS[mask_index]]["LU"][time_point].append(lu[time_point][mask[time_point]])
 
                 for model in ALL_MODELS:
                     model_result = np.load(f"{data_path}/{filename}/{filename}_{model}_{len(wavelengths)}.npz")["estimate"].reshape(*np.shape(image))
-                    results[MASK_LABELS[mask_index]][model][i].append(np.reshape(model_result[i][mask[i]], (-1, 1)))
+                    results[MASK_LABELS[mask_index]][model][time_point].append(np.reshape(model_result[time_point][mask[time_point]], (-1, 1)))
 
         results[MASK_LABELS[mask_index]]["LU"] = np.asarray(results[MASK_LABELS[mask_index]]["LU"], dtype=object)
         for model in ALL_MODELS:
@@ -118,24 +119,44 @@ distances = np.load(dist_path, allow_pickle=True)
 distances = {key: distances[key] for key in distances}
 
 
-def content(site, algo):
+def content(organ, algo):
     res = []
-    for i in range(6):
-        res.append(np.vstack(results[site].item()[algo][i]))
+    stats_results = []
+    for time_point in range(6):
+        r = results[organ].item()[algo][time_point]
+        stats_results.append([np.nanmean(r[subject]) for subject in range(6)])
+        res.append(np.vstack(r))
+
     bl = np.vstack(res[0:3]) * 100
     post = np.vstack(res[3:6]) * 100
+
+    bl_stats = np.asarray(np.mean(stats_results[0:3], axis=0)) * 100
+    post_stats = np.asarray(np.mean(stats_results[3:6], axis=0)) * 100
 
     bl_val = np.nanmean(bl)
     bl_std = np.nanstd(bl)
     post_val = np.nanmean(post)
     diff = post_val-bl_val
 
-    return rf"{bl_val:.0f}$\pm${bl_std:.0f} & {'' if diff < 0 else '+'}{diff:.0f}"
+    stats, p_val = mannwhitneyu(bl_stats.reshape((-1, )), post_stats.reshape((-1, )))
+
+    p_val_marker = "n.s."
+
+    if p_val < 0.05:
+        p_val_marker = '*'
+    if p_val < 0.01:
+        p_val_marker = '**'
+    if p_val < 0.001:
+        p_val_marker = '***'
+    if p_val < 0.0001:
+        p_val_marker = '****'
+
+    return rf"{bl_val:.0f}$\pm${bl_std:.0f} & {'' if diff < 0 else '+'}{diff:.0f} ({p_val_marker})"
 
 
 print(r"\begin{table}[]\centering\begin{tabular}{r|cc|cc|cc}")
 print(r"& \multicolumn{2}{c}{LU} & \multicolumn{2}{c}{BASE} & \multicolumn{2}{c}{WATER\_4cm} \\")
-print(r" Organ & BL & $\Delta sO_2$ & BL & $\Delta sO_2$ & BL & $\Delta sO_2$ \\")
+print(r" Organ & Before & $\Delta sO_2$ & Before & $\Delta sO_2$ & Before & $\Delta sO_2$ \\")
 print(r"\hline")
 print(rf" Body & {content('BODY', 'LU')} & {content('BODY', 'BASE')} & {content('BODY', 'WATER_4cm')} \\")
 print(rf" Spleen & {content('SPLEEN', 'LU')} & {content('SPLEEN', 'BASE')} & {content('SPLEEN', 'WATER_4cm')} \\")

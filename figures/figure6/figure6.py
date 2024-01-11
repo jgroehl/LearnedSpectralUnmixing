@@ -210,7 +210,7 @@ def create_forearm_figure(models):
     ax3.scatter(forearm_distance_means[best_dist_forearm], positions[best_dist_forearm], marker="D", c="orange",
                 label=ALL_MODELS[best_dist_forearm])
     ax3.scatter(forearm_distance_means[2], positions[2], marker="s", c="blue")
-    ax3.legend(loc="lower right")
+    ax3.legend(loc="lower right", framealpha=0)
     ax3.tick_params(direction="in", labelsize=8)
 
     ax9.text(0.43, 1.16, "$D_{JS}$ data analysis [a.u.]")
@@ -226,7 +226,7 @@ def create_forearm_figure(models):
                 label=ALL_MODELS[best_dist_mouse])
     ax9.scatter(mouse_distance_means[2], positions[2], marker="s", c="blue",
                 label=ALL_MODELS[2])
-    ax9.legend(loc="lower right")
+    ax9.legend(loc="lower right", framealpha=0)
     ax9.tick_params(direction="in", labelsize=8)
 
     ax1.text(0.5, 97, "C", size=22.5, weight='bold')
@@ -249,8 +249,8 @@ def create_forearm_figure(models):
     model_names_mouse = np.copy(models_mouse)
 
     ax1.text(1, 103, "sO$_2$ distribution (N=7)")
-    ax1.fill_between([0.5, len(models_forearm) + 0.5], 90, 100, color="red", alpha=0.25)
-    ax1.hlines(95, xmin=0.5, xmax=len(models_forearm) + 0.5, color="red")
+    ax1.fill_between([0.5, len(models_forearm) + 0.5], 90, 100, color="red", alpha=0.1, edgecolor=None)
+    ax1.hlines(95, xmin=0.5, xmax=len(models_forearm) + 0.5, color="red", alpha=0.5)
     ax1.boxplot(means_forearm,
                 patch_artist=True, showfliers=False,
                 boxprops=dict(facecolor="red", color="red", alpha=0.5),
@@ -340,8 +340,8 @@ def create_forearm_figure(models):
     image, lu, best, worst, model_1, model_2, mask = load_example(forearm_data_path + "/Forearm_07",
                                                                   ALL_MODELS[best_forearm], ALL_MODELS[worst_forearm],
                                                                   "BASE", "ALL")
-    LOWER = 130
-    UPPER = 350
+    LOWER = 80
+    UPPER = 300
     image = image[LOWER:UPPER, :]
     lu = lu[LOWER:UPPER, :]
     best = best[LOWER:UPPER, :]
@@ -364,11 +364,11 @@ def create_forearm_figure(models):
     add_image(ax6, ax6.imshow(model_1, vmin=0, vmax=100), model_1, mask, f"{model_names_forearm[-3]}")
 
     ax7.text(0.8, 102, "sO$_2$ distribution (N=7)")
-    ax7.fill_between([0.3, len(models_mouse) + 0.7], 94, 98, color="red", alpha=0.25)
-    ax7.hlines(96, xmin=0.3, xmax=len(models_mouse) + 0.7, color="red")
+    ax7.fill_between([0.3, len(models_mouse) + 0.7], 94, 98, color="red", alpha=0.1, edgecolor=None)
+    ax7.hlines(96, xmin=0.3, xmax=len(models_mouse) + 0.7, color="red", alpha=0.5)
 
-    ax7.fill_between([0.3, len(models_mouse) + 0.7], 60, 70, color="blue", alpha=0.25)
-    ax7.hlines(65, xmin=0.3, xmax=len(models_mouse) + 0.7, color="blue")
+    ax7.fill_between([0.3, len(models_mouse) + 0.7], 60, 70, color="blue", alpha=0.1, edgecolor=None)
+    ax7.hlines(65, xmin=0.3, xmax=len(models_mouse) + 0.7, color="blue", alpha=0.5)
     bp_1 = ax7.boxplot(means_mouse, widths=0.4, positions=np.arange(len(models_mouse)) + 0.8,
                        patch_artist=True, showfliers=False,
                        boxprops=dict(facecolor="red", color="red", alpha=0.5),
