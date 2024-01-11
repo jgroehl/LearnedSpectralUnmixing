@@ -6,7 +6,7 @@ if module_path not in sys.path:
 from utils.io import preprocess_data
 import matplotlib.gridspec as gridspec
 import numpy as np
-from paths import TRAINING_DATA_PATH,EXAMPLE_PATH
+from paths import TRAINING_DATA_PATH, EXAMPLE_PATH
 import glob
 import simpa as sp
 import matplotlib.pyplot as plt
@@ -29,7 +29,6 @@ NUM_RANDOM_DATAPOINTS = 200000
 
 images = [
     "Baseline_10000.hdf5",
-    "Illum_pencil_10000.hdf5",
     "SmallVessels_10000.hdf5",
     "Water_4cm_10000.hdf5"
 ]
