@@ -242,7 +242,7 @@ def create_flow_figure(models):
     add_scatter(estimates["SMALL"].reshape((n_ts, -1)), "purple",
                 fr"LSTM-based method ($\epsilon$sO$_2$: {mae_lstm:.1f}%)")
 
-    ax.set_ylabel("sO$_2$ reference [%]", fontweight="bold", fontsize=12)
+    ax.set_ylabel("sO$_2$ [%]", fontweight="bold", fontsize=12)
     ax.set_xlabel("Time [min]", fontweight="bold", fontsize=12)
 
     ax.spines["top"].set_visible(False)

@@ -7,7 +7,7 @@ from paths import TRAINING_DATA_PATH, TEST_DATA_PATH
 from utils.distribution_distance import compute_jsd
 from utils.compute_ensemble_average import compute_ensemble_average
 
-RECOMPUTE = True
+RECOMPUTE = False
 
 
 def compile_distance_measures(forearm_data_path):
@@ -135,7 +135,7 @@ def create_forearm_figure(data_path, models):
                                f"2nd best\n|\n({ALL_MODELS[second_best_dist]})",
                                f"Worst\n({ALL_MODELS[worst_dist]})",
                                f"2nd worst\n|\n({ALL_MODELS[second_worst_dist]})",
-                               "Ensemble\nEstimate"])
+                               "Ensemble\nEstimate"], showfliers=False)
     ax1.spines.right.set_visible(False)
     ax1.spines.top.set_visible(False)
     ax1.set_ylabel("Estimated sO$_2$ [%]", fontweight="bold")
@@ -165,17 +165,19 @@ def create_forearm_figure(data_path, models):
 
         ax.axis("off")
 
-    image, lu, best, worst, mask = load_forearm(data_path + "/Forearm_07", ALL_MODELS[best_dist], ALL_MODELS[worst_dist])
-    add_image(ax3, ax3.imshow(image, cmap="magma"), image, mask, "PA Signal @800 nm [a.u.]", legend=True)
-    add_image(ax4, ax4.imshow(lu, vmin=0, vmax=100), lu, mask, "Linear Unmixing [%]")
-    add_image(ax5, ax5.imshow(best, vmin=0, vmax=100), best, mask, "Best JSD [%]")
-    add_image(ax6, ax6.imshow(worst, vmin=0, vmax=100), worst, mask, "Worst JSD [%]")
+    selecton_mask = np.s_[:, :]
+    image, lu, best, worst, mask = load_forearm(data_path + "/Forearm_7", ALL_MODELS[best_dist], ALL_MODELS[worst_dist])
+    add_image(ax3, ax3.imshow(image[selecton_mask], cmap="magma"), image[selecton_mask], mask[selecton_mask], "PA Signal @800 nm [a.u.]", legend=True)
+    add_image(ax4, ax4.imshow(lu[selecton_mask], vmin=0, vmax=100), lu[selecton_mask], mask[selecton_mask], "Linear Unmixing [%]")
+    add_image(ax5, ax5.imshow(best[selecton_mask], vmin=0, vmax=100), best[selecton_mask], mask[selecton_mask], "Best JSD [%]")
+    add_image(ax6, ax6.imshow(worst[selecton_mask], vmin=0, vmax=100), worst[selecton_mask], mask[selecton_mask], "Worst JSD [%]")
 
-    image, lu, best, worst, mask = load_forearm(data_path + "/Forearm_13", ALL_MODELS[best_dist], ALL_MODELS[worst_dist])
-    add_image(ax7, ax7.imshow(image, cmap="magma"), image, mask, None, legend=True)
-    add_image(ax8, ax8.imshow(lu, vmin=0, vmax=100), lu, mask, None)
-    add_image(ax9, ax9.imshow(best, vmin=0, vmax=100), best, mask, None)
-    add_image(ax10, ax10.imshow(worst, vmin=0, vmax=100), worst, mask, None)
+    image, lu, best, worst, mask = load_forearm(data_path + "/Forearm_1", ALL_MODELS[best_dist], ALL_MODELS[worst_dist])
+    add_image(ax7, ax7.imshow(image[selecton_mask], cmap="magma"), image[selecton_mask], mask[selecton_mask], None,
+              legend=True)
+    add_image(ax8, ax8.imshow(lu[selecton_mask], vmin=0, vmax=100), lu[selecton_mask], mask[selecton_mask], None)
+    add_image(ax9, ax9.imshow(best[selecton_mask], vmin=0, vmax=100), best[selecton_mask], mask[selecton_mask], None)
+    add_image(ax10, ax10.imshow(worst[selecton_mask], vmin=0, vmax=100), worst[selecton_mask], mask[selecton_mask], None)
 
     plt.savefig(data_path + "/result.png", dpi=300)
 

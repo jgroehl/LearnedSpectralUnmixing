@@ -11,6 +11,7 @@ for folder_path in glob.glob(PATH + "*"):
         continue
     folder = folder_path.split("/")[-1].split("\\")[-1]
 
+    # Optional data fields:
     print(folder)
     data = np.load(folder_path + "/" + folder + ".npz")
     spectra = data["spectra"]

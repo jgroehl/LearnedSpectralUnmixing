@@ -19,17 +19,23 @@ print("Mouse")
 mouse_distances = np.load(mouse_path + "/all_distances.npz", allow_pickle=True)
 mouse_distances = {key: mouse_distances[key] for key in mouse_distances}
 mouse_distance_means = np.asarray([np.mean(mouse_distances[model]) for model in ALL_MODELS])
-best_dist_mouse = np.argmin(mouse_distance_means)
+ideal_dist_mouse = np.argmin(mouse_distance_means)
 worst_dist_mouse = np.argmax(mouse_distance_means)
-print("Best", ALL_MODELS[best_dist_mouse])
+print("Best", ALL_MODELS[ideal_dist_mouse])
 print("Worst", ALL_MODELS[worst_dist_mouse])
 
 print("Forearm")
 forearm_distances = np.load(forearm_path + "/all_distances.npz", allow_pickle=True)
 forearm_distances = {key: forearm_distances[key] for key in forearm_distances}
 forearm_distance_means = np.asarray([np.mean(forearm_distances[model]) for model in ALL_MODELS])
-best_dist_forearm = np.argmin(forearm_distance_means)
-print("Best", ALL_MODELS[best_dist_forearm])
+sorted_indices = np.argsort(forearm_distance_means)
+
+# On the second test dataset, MSOT_ACOUS_SKIN was assigned the second highest score and not the highest score.
+# This is still really encouraging, but the selection process is not as simple as taking the best score and
+# you are done. Working with JSD is only an indication and needs expert oversight.
+# This is mentioned in the paper.
+ideal_forearm = sorted_indices[1]
+print("Best", ALL_MODELS[ideal_forearm])
 worst_dist_forearm = np.argmax(forearm_distance_means)
 print("Worst", ALL_MODELS[worst_dist_forearm])
 
@@ -158,8 +164,12 @@ def load_data(path, models, mouse=False):
         results_kidney = np.load(res_path[1], allow_pickle=True)
         results_kidney = {key: results_kidney[key] for key in results_kidney}
 
-    best_dist = np.argmin(distance_means)
-    worst_dist = np.argmax(distance_means)
+    if not mouse:
+        best_dist = ideal_forearm
+        worst_dist = worst_dist_forearm
+    else:
+        best_dist = np.argmin(distance_means)
+        worst_dist = np.argmax(distance_means)
     distance_means_2 = distance_means.copy()
     distance_means_2[best_dist] = np.mean(distance_means)
     distance_means_2[worst_dist] = np.mean(distance_means)
@@ -183,7 +193,7 @@ def create_forearm_figure(models):
     forearm_data_path = fr"{TEST_DATA_PATH}\forearm/"
     mouse_data_path = fr"{TEST_DATA_PATH}\mouse/"
 
-    models_forearm, means_forearm, _, best_forearm, worst_forearm = load_data(forearm_data_path, models)
+    models_forearm, means_forearm, _, _, worst_forearm = load_data(forearm_data_path, models)
     models_mouse, means_mouse, means_mouse_kidney, best_mouse, worst_mouse = load_data(mouse_data_path,
                                                                                        models, mouse=True)
 
@@ -195,11 +205,11 @@ def create_forearm_figure(models):
 
     np.random.seed(1336)
     positions = np.random.uniform(0.9, 1.1, size=np.shape(mouse_distance_means))
-    positions[best_dist_forearm] = 1
+    positions[ideal_forearm] = 1
     positions[worst_dist_forearm] = 1
-    positions[best_dist_mouse] = 1
+    positions[ideal_dist_mouse] = 1
 
-    ax3.text(0.50, 1.12, "$D_{JS}$ data analysis [a.u.]")
+    ax3.text(0.36, 1.12, "$D_{JS}$ data analysis [a.u.]")
     ax3.spines.left.set_visible(False)
     ax3.spines.right.set_visible(False)
     ax3.spines.top.set_visible(False)
@@ -207,8 +217,8 @@ def create_forearm_figure(models):
     ax3.set_ylim(0.6, 1.2)
     ax3.scatter(forearm_distance_means, positions, c="gray", s=5)
     ax3.scatter(forearm_distance_means[worst_dist_forearm], positions[worst_dist_forearm], marker="*", c="red")
-    ax3.scatter(forearm_distance_means[best_dist_forearm], positions[best_dist_forearm], marker="D", c="orange",
-                label=ALL_MODELS[best_dist_forearm])
+    ax3.scatter(forearm_distance_means[ideal_forearm], positions[ideal_forearm], marker="D", c="orange",
+                label=ALL_MODELS[ideal_forearm])
     ax3.scatter(forearm_distance_means[2], positions[2], marker="s", c="blue")
     ax3.legend(loc="lower right", framealpha=0)
     ax3.tick_params(direction="in", labelsize=8)
@@ -222,8 +232,8 @@ def create_forearm_figure(models):
     ax9.scatter(mouse_distance_means, positions, c="gray", s=5)
     ax9.scatter(mouse_distance_means[worst_dist_mouse], positions[worst_dist_mouse], marker="*", c="red",
                 label=ALL_MODELS[worst_dist_mouse])
-    ax9.scatter(mouse_distance_means[best_dist_mouse], positions[best_dist_mouse], marker="P", c="#03A9F4",
-                label=ALL_MODELS[best_dist_mouse])
+    ax9.scatter(mouse_distance_means[ideal_dist_mouse], positions[ideal_dist_mouse], marker="P", c="#03A9F4",
+                label=ALL_MODELS[ideal_dist_mouse])
     ax9.scatter(mouse_distance_means[2], positions[2], marker="s", c="blue",
                 label=ALL_MODELS[2])
     ax9.legend(loc="lower right", framealpha=0)
@@ -231,7 +241,7 @@ def create_forearm_figure(models):
 
     ax1.text(0.5, 97, "C", size=22.5, weight='bold')
     ax2.text(0, 50, "A", size=22.5, weight='bold', color="white")
-    ax3.text(0.465, 1.07, "B", size=22.5, weight='bold', color="black")
+    ax3.text(0.3, 1.07, "B", size=22.5, weight='bold', color="black")
     ax4.text(0, 50, "D", size=22.5, weight='bold', color="white")
     ax5.text(0, 50, "E", size=22.5, weight='bold', color="white")
     ax6.text(0, 50, "F", size=22.5, weight='bold', color="white")
@@ -257,8 +267,8 @@ def create_forearm_figure(models):
                 medianprops=dict(linewidth=1, color='black'))
     ax1.tick_params(direction="in")
     models_forearm[0] = "LU"
-    models_forearm[-1] = "Worst"
-    models_forearm[-2] = "Best"
+    models_forearm[-1] = "ILL_PNT"
+    models_forearm[-2] = "M_AC_SK"
     ax1.set_xticks(np.arange(len(models_forearm)) + 1, models_forearm, fontsize=8)
     ax1.spines.right.set_visible(False)
     ax1.spines.top.set_visible(False)
@@ -335,10 +345,8 @@ def create_forearm_figure(models):
 
         ax.axis("off")
 
-
-
-    image, lu, best, worst, model_1, model_2, mask = load_example(forearm_data_path + "/Forearm_07",
-                                                                  ALL_MODELS[best_forearm], ALL_MODELS[worst_forearm],
+    image, lu, best, worst, model_1, model_2, mask = load_example(forearm_data_path + "/Forearm_2",
+                                                                  ALL_MODELS[ideal_forearm], ALL_MODELS[worst_forearm],
                                                                   "BASE", "ALL")
     LOWER = 80
     UPPER = 300
@@ -349,7 +357,7 @@ def create_forearm_figure(models):
     model_1 = model_1[LOWER:UPPER, :]
     model_2 = model_2[LOWER:UPPER, :]
     mask = mask[LOWER:UPPER, :]
-    im = ax2.imshow(image/100, cmap="magma", vmin=-10, vmax=50)
+    im = ax2.imshow(image/100, cmap="magma", vmin=-5, vmax=10)
     ax2.text(50, 30, "Forearm PAI [a.u.]", color="white", fontweight="bold")
     ax2.axis("off")
     ax2.add_artist(ScaleBar(0.075, "mm", location="lower left"))
@@ -379,8 +387,8 @@ def create_forearm_figure(models):
                        medianprops=dict(linewidth=1, color='black'))
     ax7.tick_params(direction="in")
     models_mouse[0] = "LU"
-    models_mouse[-1] = "Worst"
-    models_mouse[-2] = "Best"
+    models_mouse[-1] = "ILL_PNT"
+    models_mouse[-2] = "WTR_4cm"
     ax7.set_xticks(np.arange(len(models_mouse)) + 1, models_mouse, fontsize=8)
     ax7.spines.right.set_visible(False)
     ax7.spines.top.set_visible(False)
